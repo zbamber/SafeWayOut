@@ -11,7 +11,20 @@ def stretchImage(event):
     # print(f'width: {width}, height: {height}')
     resizedMap = ImageTk.PhotoImage(mapImage.resize((width,height)))
     mapCanvas.create_image(0,0, image = resizedMap, anchor='nw')
-    
+
+def placeMenuButton(button):
+    button.pack(fill='x', padx=10, pady=5)
+    button.bind('<Enter>', lambda event: button.configure(text_color='white', fg_color='black'))
+    button.bind('<Leave>', lambda event: button.configure(text_color='black', fg_color='white'))
+
+menuButtonStyling = {
+    'border_width':2,
+    'border_color':'black',
+    'text_color':'black',
+    'font':('Excalifont',20),
+    'fg_color':'white',
+    'corner_radius':10
+}
 
 
 app = tk.Tk()
@@ -23,20 +36,25 @@ app.rowconfigure(0, weight=1)
 app.configure(bg='white')
 app.iconbitmap('fire.ico')
 
-style = ttk.Style()
-style.configure('menu.TButton', foreground = 'black', background='white', font = ('Excalifont', 20))
-style.map('menu.TButton', foreground=[('pressed', 'red'),('disabled', 'yellow')])
+
 mapImage = Image.open('siteplan.png')
+homeDark = ImageTk.PhotoImage(Image.open('homeDark.png'))
+homeLight = ImageTk.PhotoImage(Image.open('homeLight.png'))
 
 menuFrame = ctk.CTkFrame(app, corner_radius=15, border_color='black', border_width=5, bg_color='white', fg_color='white')
 title = ttk.Label(menuFrame, text='Safe Way Out', background='white', foreground='black', font=('Excalifont', 20))
 title.pack(pady=20, padx=20)
-homeButton = ttk.Button(menuFrame, text='Home', style='menu.TButton')
-optimisePlanButton = ttk.Button(menuFrame, text='Optimise Plan', style='menu.TButton')
-inputDataButton = ttk.Button(menuFrame, text='Input Data', style='menu.TButton')
-homeButton.pack()
-optimisePlanButton.pack()
-inputDataButton.pack()
+
+homeButton = ctk.CTkButton(menuFrame, text='    Home', image=homeDark, anchor='w', **menuButtonStyling)
+optimisePlanButton = ctk.CTkButton(menuFrame, text='Optimise Plan', **menuButtonStyling)
+inputDataButton = ctk.CTkButton(menuFrame, text='Input Data', **menuButtonStyling)
+
+
+homeButton.pack(fill='x', padx=10, pady=5)
+homeButton.bind('<Enter>', lambda event: homeButton.configure(text_color='white', fg_color='black', image=homeLight))
+homeButton.bind('<Leave>', lambda event: homeButton.configure(text_color='black', fg_color='white', image=homeDark))
+placeMenuButton(optimisePlanButton)
+placeMenuButton(inputDataButton)
 
 contentFrame = ctk.CTkFrame(app, bg_color='white', fg_color='white')
 contentFrame.rowconfigure(0, weight=4)
