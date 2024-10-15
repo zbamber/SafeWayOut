@@ -26,6 +26,16 @@ menuButtonStyling = {
     'corner_radius':10
 }
 
+checkboxStyling = {
+    'width':5,
+    'height':10,
+    'fg_color':'white',
+    'text_color':'black',
+    'font':('Excalifont',20),
+    'border_color':'black',
+    'hover_color':'black'
+}
+
 
 app = tk.Tk()
 app.title('Safe Way Out')
@@ -42,10 +52,10 @@ homeDark = ImageTk.PhotoImage(Image.open('homeDark.png'))
 homeLight = ImageTk.PhotoImage(Image.open('homeLight.png'))
 
 menuFrame = ctk.CTkFrame(app, corner_radius=15, border_color='black', border_width=5, bg_color='white', fg_color='white')
-title = ttk.Label(menuFrame, text='Safe Way Out', background='white', foreground='black', font=('Excalifont', 20))
+title = ctk.CTkLabel(menuFrame, text='Safe Way Out', fg_color='white', text_color='black', font=('Excalifont', 20))
 title.pack(pady=20, padx=20)
 
-homeButton = ctk.CTkButton(menuFrame, text='    Home', image=homeDark, anchor='w', **menuButtonStyling)
+homeButton = ctk.CTkButton(menuFrame, text='   Home', image=homeDark, anchor='w', **menuButtonStyling)
 optimisePlanButton = ctk.CTkButton(menuFrame, text='Optimise Plan', **menuButtonStyling)
 inputDataButton = ctk.CTkButton(menuFrame, text='Input Data', **menuButtonStyling)
 
@@ -68,9 +78,25 @@ upperContentFrame.rowconfigure(0, weight=1)
 lowerContentFrame = ctk.CTkFrame(contentFrame, corner_radius=15, border_color='black', border_width=5, bg_color='white', fg_color='white')
 
 mapContainer = ctk.CTkFrame(upperContentFrame, corner_radius=15, border_color='black', border_width=5, bg_color='white', fg_color='white')
-mapCanvas = tk.Canvas(mapContainer, background='white', bd=0, highlightthickness=0, relief='ridge')
+mapCanvas = ctk.CTkCanvas(mapContainer, background='white', bd=0, highlightthickness=0, relief='ridge')
 mapCanvas.pack(fill='both', expand=True, padx=10, pady=10)
+
 toDoContainer = ctk.CTkFrame(upperContentFrame, corner_radius=15, border_color='black', border_width=5, bg_color='white', fg_color='white')
+toDoLabel = ctk.CTkLabel(toDoContainer, text='To Do:', fg_color='white', text_color='black', font=('Excalifont', 25) )
+sitePlanCheckBox = ctk.CTkCheckBox(toDoContainer, text=' Insert Site Plan', **checkboxStyling)
+placeNodesCheckBox = ctk.CTkCheckBox(toDoContainer, text=' Place Nodes', **checkboxStyling)
+optimiseCheckBox = ctk.CTkCheckBox(toDoContainer, text=' Optimise', **checkboxStyling)
+analyseCheckBox = ctk.CTkCheckBox(toDoContainer, text=' Analyse Bottlenecks', **checkboxStyling)
+capacityDataCheckBox = ctk.CTkCheckBox(toDoContainer, text=' Import Capacity Data', **checkboxStyling)
+simulateCheckBox = ctk.CTkCheckBox(toDoContainer, text=' Simulate Event', **checkboxStyling)
+
+toDoLabel.pack(pady=20)
+sitePlanCheckBox.pack(fill='x', padx=30, pady=10)
+placeNodesCheckBox.pack(fill='x', padx=30, pady=10)
+optimiseCheckBox.pack(fill='x', padx=30, pady=10)
+analyseCheckBox.pack(fill='x', padx=30, pady=10)
+capacityDataCheckBox.pack(fill='x', padx=30, pady=10)
+simulateCheckBox.pack(fill='x', padx=30, pady=10)
 
 mapContainer.grid(row=0, column=0, sticky='nsew', padx=(10, 5), pady=10)
 toDoContainer.grid(row=0, column=1, sticky='nsew', padx=(5, 10), pady=10)
@@ -81,7 +107,5 @@ menuFrame.grid(row=0, column=0, sticky='nsew', padx=(10,5), pady=10)
 contentFrame.grid(row=0, column=1, sticky='nsew')
 
 mapCanvas.bind('<Configure>', stretchImage)
-
-
 
 app.mainloop()
