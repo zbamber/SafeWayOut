@@ -25,7 +25,7 @@ class App(tk.Tk):
         self.configure(bg='white')
         self.iconbitmap('fire.ico')
         self.menu = Menu(self)
-        self.homepage = homePage(self)
+        self.currentPage = homePage(self)
     
 class Menu(ctk.CTkFrame):
 
@@ -50,8 +50,8 @@ class Menu(ctk.CTkFrame):
         }
 
         self.title = ctk.CTkLabel(self, text='Safe Way Out', fg_color='white', text_color='black', font=('Excalifont', 20))
-        self.homeButton = ctk.CTkButton(self, text='   Home', image=self.homeDark, anchor='w', **menuButtonStyling)
-        self.optimisePlanButton = ctk.CTkButton(self, text='Optimise Plan', **menuButtonStyling)
+        self.homeButton = ctk.CTkButton(self, text='   Home', image=self.homeDark, anchor='w', **menuButtonStyling, command=self.openHomePage)
+        self.optimisePlanButton = ctk.CTkButton(self, text='Optimise Plan', **menuButtonStyling, command=self.openOptimisePlanPage)
         self.inputDataButton = ctk.CTkButton(self, text='Input Data', **menuButtonStyling)
     
     def placeMenuWidgets(self):
@@ -66,6 +66,12 @@ class Menu(ctk.CTkFrame):
         button.pack(fill='x', padx=10, pady=5)
         button.bind('<Enter>', lambda event: button.configure(text_color='white', fg_color='black'))
         button.bind('<Leave>', lambda event: button.configure(text_color='black', fg_color='white'))
+    
+    def openHomePage(self):
+        app.currentPage = homePage(app)
+
+    def openOptimisePlanPage(self):
+        app.currentPage = optimisePlanPage(app)
 
 class homePage(ctk.CTkFrame):
     def __init__(self, parent):
@@ -77,7 +83,7 @@ class homePage(ctk.CTkFrame):
         self.mapImage = Image.open('siteplan.png')
         self.createWidgets()
         self.placeHomePageWidgets()
-    
+
     def createWidgets(self):
 
         checkboxStyling = {
@@ -137,6 +143,11 @@ class homePage(ctk.CTkFrame):
 
         resizedMap = ImageTk.PhotoImage(self.mapImage.resize((width,height)))
         self.mapCanvas.create_image(0,0, image = resizedMap, anchor='nw')
+
+class optimisePlanPage(ctk.CTkFrame):
+    def __init__(self,parent):
+        super().__init__(parent)
+        self.configure()
 
 if __name__ == '__main__':
     app = App()
