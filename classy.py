@@ -19,14 +19,21 @@ class App(tk.Tk):
         super().__init__()
         self.title('Safe Way Out')
         self.geometry('1280x720')
-        self.columnconfigure(0, weight=1)
-        self.columnconfigure(1, weight=20)
+        self.columnconfigure(0, weight=0)
+        self.columnconfigure(1, weight=1)
         self.rowconfigure(0, weight=1)
         self.configure(bg='white')
         self.iconbitmap('fire.ico')
         self.menu = Menu(self)
-        self.currentPage = homePage(self)
+        self.homePage = homePage(self)
+        self.optimisePlanPage = optimisePlanPage(self)
+        self.resizable(False,False)
     
+    def showPage(self, page):
+        self.homePage.grid_forget()
+        self.optimisePlanPage.grid_forget()
+        page.grid(row=0, column=1, sticky='nsew')
+
 class Menu(ctk.CTkFrame):
 
     def __init__(self, parent):
@@ -68,10 +75,10 @@ class Menu(ctk.CTkFrame):
         button.bind('<Leave>', lambda event: button.configure(text_color='black', fg_color='white'))
     
     def openHomePage(self):
-        app.currentPage = homePage(app)
+        self.master.showPage(self.master.homePage)
 
     def openOptimisePlanPage(self):
-        app.currentPage = optimisePlanPage(app)
+        self.master.showPage(self.master.optimisePlanPage)
 
 class homePage(ctk.CTkFrame):
     def __init__(self, parent):
@@ -80,7 +87,6 @@ class homePage(ctk.CTkFrame):
         self.rowconfigure(0, weight=4)
         self.rowconfigure(1, weight=1)
         self.columnconfigure(0, weight=1)
-        self.mapImage = Image.open('siteplan.png')
         self.createWidgets()
         self.placeHomePageWidgets()
 
@@ -108,7 +114,6 @@ class homePage(ctk.CTkFrame):
         self.warningTable.heading('Extra Information', text='Extra Information')
         self.mapContainer = ctk.CTkFrame(self.upperContentFrame, corner_radius=15, border_color='black', border_width=5, bg_color='white', fg_color='white')
         self.mapCanvas = ctk.CTkCanvas(self.mapContainer, background='white', bd=0, highlightthickness=0, relief='ridge')
-        self.mapCanvas.bind('<Configure>', self.stretchImage)
         self.toDoContainer = ctk.CTkFrame(self.upperContentFrame, corner_radius=15, border_color='black', border_width=5, bg_color='white', fg_color='white')
         self.toDoLabel = ctk.CTkLabel(self.toDoContainer, text='To Do:', fg_color='white', text_color='black', font=('Excalifont', 25) )
         self.sitePlanCheckBox = ctk.CTkCheckBox(self.toDoContainer, text=' Insert Site Plan', **checkboxStyling)
@@ -135,19 +140,10 @@ class homePage(ctk.CTkFrame):
         self.lowerContentFrame.grid(row=1, column=0, sticky='nsew', padx=10, pady=(5, 10))
         self.grid(row=0, column=1, sticky='nsew')
 
-
-    def stretchImage(self, event):
-        global resizedMap
-        width = event.width
-        height = event.height
-
-        resizedMap = ImageTk.PhotoImage(self.mapImage.resize((width,height)))
-        self.mapCanvas.create_image(0,0, image = resizedMap, anchor='nw')
-
 class optimisePlanPage(ctk.CTkFrame):
     def __init__(self,parent):
         super().__init__(parent)
-        self.configure()
+        self.configure(bg_color='white', fg_color='white')
 
 if __name__ == '__main__':
     app = App()
