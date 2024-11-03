@@ -105,12 +105,12 @@ class Canvas(ctk.CTkCanvas):
         gridYIndex = event.y // 8
         print(f'xclick: {gridXIndex}, yclick: {gridYIndex}')
         self.create_rectangle((8 * (gridXIndex+1) - 5, 8 * (gridYIndex+1) - 5, 8 * (gridXIndex+1) + 2, 8 * (gridYIndex+1) + 2), fill='black')
-        app.matrix[gridYIndex][gridXIndex] = 0
+        self.master.master.matrix[gridYIndex][gridXIndex] = 0
 
     def display(self):
         for y in range(80):
             for x in range(120):
-                if app.matrix[y][x] == 0:
+                if self.master.master.matrix[y][x] == 0:
                     print('here i am')
                     self.create_rectangle((5 * (x+1) - 3, 5 * (y+1) - 3, 5 * (x+1) + 2, 5 * (y+1) + 2), fill='black')
 
