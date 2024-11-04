@@ -152,6 +152,7 @@ class homePage(ctk.CTkFrame):
 class optimisePlanPage(ctk.CTkFrame):
     def __init__(self,parent):
         super().__init__(parent)
+        self.upload = CTkImage(light_image=Image.open('upload.png'))
         self.configure(bg_color='white', fg_color='white')
         self.createWidgets()
         self.placeWidgets()
@@ -162,7 +163,7 @@ class optimisePlanPage(ctk.CTkFrame):
         self.mapCanvas = Canvas(parent=self.mapContainer, width=960, height=640 )
         self.mapCanvas.bind('<Button>', lambda event: self.mapCanvas.creation(event=event))
         self.mapCanvas.bind('<B1-Motion>', lambda event: self.mapCanvas.creation(event=event))
-        self.openFile = ctk.CTkButton(self, text='Open a file', font=('Excalifont',20), text_color='black', fg_color='white', hover_color='white', command=self.openFileDialog)
+        self.openFile = ctk.CTkButton(self, text='Open a file', font=('Excalifont',20), text_color='black', fg_color='white', hover_color='white', command=self.openFileDialog, image=self.upload)
 
     def placeWidgets(self):
         self.mapContainer.pack(pady=(10,0), side='left')
