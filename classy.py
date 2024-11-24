@@ -3,6 +3,7 @@ from tkinter import ttk, filedialog
 import customtkinter as ctk
 from customtkinter import CTkImage
 from PIL import Image
+import time
 
 class App(tk.Tk):
 
@@ -154,44 +155,133 @@ class optimisePlanPage(ctk.CTkFrame):
         super().__init__(parent)
         self.upload = CTkImage(light_image=Image.open('upload.png'))
         self.brush = CTkImage(light_image=Image.open('brush(64).png'), size=(64,64))
-        self.undo = CTkImage(light_image=Image.open('undo-circular-arrow.png'), size=(16,16))
+        self.blackPencil = CTkImage(light_image=Image.open('blackPencil.png'), size=(16,16))
+        self.blackEraser = CTkImage(light_image=Image.open('blackEraser.png'), size=(16,16))
+        self.blackLine = CTkImage(light_image=Image.open('blackLine.png'), size=(16,16))
+        self.blackBullseye = CTkImage(light_image=Image.open('blackBullseye.png'), size=(16,16))
+        self.blackUndo = CTkImage(light_image=Image.open('blackUndo.png'), size=(16,16))
+        self.blackRedo = CTkImage(light_image=Image.open('blackRedo.png'), size=(16,16))
+        self.whitePencil = CTkImage(light_image=Image.open('whitePencil.png'), size=(16,16))
+        self.whiteEraser = CTkImage(light_image=Image.open('whiteEraser.png'), size=(16,16))
+        self.whiteLine = CTkImage(light_image=Image.open('whiteLine.png'), size=(16,16))
+        self.whiteBullseye = CTkImage(light_image=Image.open('whiteBullseye.png'), size=(16,16))
+        self.whiteUndo = CTkImage(light_image=Image.open('whiteUndo.png'), size=(16,16))
+        self.whiteRedo = CTkImage(light_image=Image.open('whiteRedo.png'), size=(16,16))
         self.configure(bg_color='white', fg_color='white')
         self.createWidgets()
         self.placeWidgets()
     
     def createWidgets(self):
+        ButtonStyling = {
+        'border_width':2,
+        'border_color':'black',
+        'text_color':'black',
+        'font':('Excalifont',20),
+        'fg_color':'white',
+        'corner_radius':10
+        }
+
         self.upperFrame = ctk.CTkFrame(self, bg_color='white', fg_color='white')
         self.toolContainer = ctk.CTkFrame(self.upperFrame, bg_color='white', fg_color='white')
-        # self.toolContainer.rowconfigure((0,1,2,3,4,5), weight=1)
-        # self.toolContainer.rowconfigure(6, weight=3)
-        # self.toolContainer.rowconfigure((7,8), weight=1)
-        # self.toolContainer.columnconfigure((0,1), weight=1)
-        self.toolContainer.rowconfigure(0, weight=1)
-        self.toolContainer.rowconfigure(1, weight=1)
-        self.toolContainer.rowconfigure(2, weight=1)
-        self.toolContainer.rowconfigure(3, weight=1)
-        self.toolContainer.rowconfigure(4, weight=1)
-        self.toolContainer.rowconfigure(5, weight=1)
-        self.toolContainer.rowconfigure(6, weight=1)
-        self.toolContainer.rowconfigure(7, weight=1)
-        self.toolContainer.rowconfigure(8, weight=1)
-        self.toolContainer.columnconfigure(0, weight=1)
-        self.toolContainer.columnconfigure(1, weight=1)
-        self.tester = ctk.CTkButton(self.toolContainer, bg_color='red', fg_color='red', text='')
-        # self.brushLabel = ctk.CTkLabel(self.toolContainer, image=self.brush, text='')
-        # self.undoButton = ctk.CTkButton(self.toolContainer, image=self.undo, text='')
+        self.toolContainer.rowconfigure((0,1,2,3,4,5), weight=1)
+        self.toolContainer.rowconfigure(6, weight=3)
+        self.toolContainer.rowconfigure((7,8), weight=1)
+        self.toolContainer.columnconfigure((0,1), weight=1)
+        self.brushLabel = ctk.CTkLabel(self.toolContainer, image=self.brush, text='')
+        self.pencilButton = ctk.CTkButton(self.toolContainer, image=self.blackPencil, text='', **ButtonStyling, command=lambda: self.after(100, self.handlePencilButtonClick))
+        self.eraserButton = ctk.CTkButton(self.toolContainer, image=self.blackEraser, text='', **ButtonStyling, command=lambda: self.after(100, self.handleEraserButtonClick))
+        self.lineButton = ctk.CTkButton(self.toolContainer, image=self.blackLine, text='', **ButtonStyling, command=lambda: self.after(100, self.handleLineButtonClick))
+        self.bullseyeButton = ctk.CTkButton(self.toolContainer, image=self.blackBullseye, text='', **ButtonStyling, command=lambda: self.after(100, self.handleBullseyeButtonClick))
+        self.undoButton = ctk.CTkButton(self.toolContainer, image=self.blackUndo, text='', **ButtonStyling, command=lambda: self.after(100, self.handleUndoButtonClick))
+        self.redoButton = ctk.CTkButton(self.toolContainer, image=self.blackRedo, text='', **ButtonStyling, command=lambda: self.after(100, self.handleRedoButtonClick))
+        self.clearCanvasButton = ctk.CTkButton(self.toolContainer, text='Clear', **ButtonStyling, command=lambda: self.after(100, self.handleClearButtonClick))
+        self.doneButton = ctk.CTkButton(self.toolContainer, text='Done', **ButtonStyling, command=lambda: self.after(100, self.handleDoneButtonClick))
+        self.saveButton = ctk.CTkButton(self.toolContainer,text='Save', **ButtonStyling, command=lambda: self.after(100, self.handleSaveButtonClick))
+        self.padder = ctk.CTkFrame(self.toolContainer, bg_color='white', fg_color='white')
         self.mapContainer = ctk.CTkFrame(self.upperFrame, corner_radius=15, border_color='black', border_width=5, bg_color='white', fg_color='white')
         self.mapCanvas = Canvas(parent=self.mapContainer, width=960, height=640)
         self.mapCanvas.bind('<Button>', lambda event: self.mapCanvas.creation(event=event))
         self.mapCanvas.bind('<B1-Motion>', lambda event: self.mapCanvas.creation(event=event))
         self.openFile = ctk.CTkButton(self, text='Open a file', font=('Excalifont',20), text_color='black', fg_color='white', hover_color='white', command=self.openFileDialog, image=self.upload)
+        self.pencilButton.bind('<Enter>', lambda event: self.pencilButton.configure(text_color='white', fg_color='black', image=self.whitePencil))
+        self.pencilButton.bind('<Leave>', lambda event: self.pencilButton.configure(text_color='black', fg_color='white', image=self.blackPencil))
+        self.eraserButton.bind('<Enter>', lambda event: self.eraserButton.configure(text_color='white', fg_color='black', image=self.whiteEraser))
+        self.eraserButton.bind('<Leave>', lambda event: self.eraserButton.configure(text_color='black', fg_color='white', image=self.blackEraser))
+        self.lineButton.bind('<Enter>', lambda event: self.lineButton.configure(text_color='white', fg_color='black', image=self.whiteLine))
+        self.lineButton.bind('<Leave>', lambda event: self.lineButton.configure(text_color='black', fg_color='white', image=self.blackLine))
+        self.bullseyeButton.bind('<Enter>', lambda event: self.bullseyeButton.configure(text_color='white', fg_color='black', image=self.whiteBullseye))
+        self.bullseyeButton.bind('<Leave>', lambda event: self.bullseyeButton.configure(text_color='black', fg_color='white', image=self.blackBullseye))
+        self.undoButton.bind('<Enter>', lambda event: self.undoButton.configure(text_color='white', fg_color='black', image=self.whiteUndo))
+        self.undoButton.bind('<Leave>', lambda event: self.undoButton.configure(text_color='black', fg_color='white', image=self.blackUndo))
+        self.redoButton.bind('<Enter>', lambda event: self.redoButton.configure(text_color='white', fg_color='black', image=self.whiteRedo))
+        self.redoButton.bind('<Leave>', lambda event: self.redoButton.configure(text_color='black', fg_color='white', image=self.blackRedo))
+        self.configureTextButtons(self.clearCanvasButton)
+        self.configureTextButtons(self.doneButton)
+        self.configureTextButtons(self.saveButton)
+
+    def configureTextButtons(self, button):
+        button.bind('<Enter>', lambda event: button.configure(text_color='white', fg_color='black'))
+        button.bind('<Leave>', lambda event: button.configure(text_color='black', fg_color='white'))
+    
+    def deselectCurrentButton(self):
+        self.pencilButton.configure(border_width=2)
+        self.eraserButton.configure(border_width=2)
+        self.lineButton.configure(border_width=2)
+        self.bullseyeButton.configure(border_width=2)
+
+    def handlePencilButtonClick(self):
+        self.deselectCurrentButton()
+        self.pencilButton.configure(text_color='black', fg_color='white', image=self.blackPencil, border_width=4)
+
+    def handleEraserButtonClick(self):
+        self.deselectCurrentButton()
+        self.eraserButton.configure(text_color='white', fg_color='black', image=self.blackEraser, border_width=4)
+
+    def handleLineButtonClick(self):
+        self.deselectCurrentButton()
+        self.lineButton.configure(text_color='white', fg_color='black', image=self.blackLine, border_width=4)
+
+    def handleBullseyeButtonClick(self):
+        self.deselectCurrentButton()
+        self.bullseyeButton.configure(text_color='white', fg_color='black', image=self.blackBullseye, border_width=4)
+
+    def handleUndoButtonClick(self):
+        self.deselectCurrentButton()
+        self.undoButton.configure(text_color='white', fg_color='black', image=self.blackUndo)
+
+    def handleRedoButtonClick(self):
+        self.deselectCurrentButton()
+        self.redoButton.configure(text_color='white', fg_color='black', image=self.blackRedo)
+
+    def handleClearButtonClick(self):
+        self.deselectCurrentButton()
+        self.clearCanvasButton.configure(text_color='white', fg_color='black')
+
+    def handleDoneButtonClick(self):
+        self.deselectCurrentButton()
+        self.doneButton.configure(text_color='white', fg_color='black')
+
+    def handleSaveButtonClick(self):
+        self.deselectCurrentButton()
+        self.saveButton.configure(text_color='white', fg_color='black')
+
 
     def placeWidgets(self):
         self.mapContainer.pack(pady=(10,0), side='left')
         self.toolContainer.pack(side='left', fill='both', expand=True, pady=(10,0))
-        self.tester.grid(row=0, column=1)
-        # self.brushLabel.grid(row=0, column=0, rowspan=2, columnspan=2, sticky='new')
-        # self.undoButton.grid(row=4, column=0, sticky='nsew')
+        # self.tester.grid(row=0, column=0, sticky='nsew')
+        # self.tester2.grid(row=0, column=1, sticky='nsew')
+        self.brushLabel.grid(row=0, column=0, rowspan=2, columnspan=2, sticky='new', pady=(5,0))
+        self.pencilButton.grid(row=2, column=0, sticky='nsew', padx=2, pady=2)
+        self.eraserButton.grid(row=2, column=1, sticky='nsew', padx=2, pady=2)
+        self.lineButton.grid(row=3, column=0, sticky='nsew', padx=2, pady=2)
+        self.bullseyeButton.grid(row=3, column=1, sticky='nsew', padx=2, pady=2)
+        self.undoButton.grid(row=4, column=0, sticky='nsew', padx=2, pady=2)
+        self.redoButton.grid(row=4, column=1, sticky='nsew', padx=2, pady=2)
+        self.clearCanvasButton.grid(row=5, column=0, sticky='nsew', columnspan=2, padx=2, pady=2)
+        self.padder.grid(row=6, column=0, columnspan=2, sticky='nsew')
+        self.doneButton.grid(row=7, column=0, sticky='nsew', columnspan=2, padx=2, pady=2)
+        self.saveButton.grid(row=8, column=0, sticky='nsew', columnspan=2, padx=2, pady=2)
         self.mapCanvas.pack(pady=10, padx=10)
         self.upperFrame.pack(fill='both', expand=True)
         self.openFile.pack(fill='y', expand=True, pady=(0,10))
