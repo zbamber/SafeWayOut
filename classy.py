@@ -65,7 +65,7 @@ class Menu(ctk.CTkFrame):
         self.title = ctk.CTkLabel(self, text='Safe Way Out', fg_color='white', text_color='black', font=('Excalifont', 20))
         self.homeButton = ctk.CTkButton(self, text='   Home', image=self.homeDark, anchor='w', **menuButtonStyling, command=self.openHomePage)
         self.optimisePlanButton = ctk.CTkButton(self, text='Optimise Plan', **menuButtonStyling, command=self.openOptimisePlanPage)
-        self.inputDataButton = ctk.CTkButton(self, text='Input Data', **menuButtonStyling)
+        self.inputDataButton = ctk.CTkButton(self, text='Input Data', **menuButtonStyling, command=self.openInputDataPage)
     
     def placeMenuWidgets(self):
         self.title.pack(pady=20, padx=30)
@@ -82,12 +82,17 @@ class Menu(ctk.CTkFrame):
     
     def openHomePage(self):
         self.master.showPage(self.master.homePage)
+        self.after(100, lambda: self.homeButton.configure(text_color='black', fg_color='white', image=self.homeDark))
         if self.master.dataAdded.get() == True:
             self.master.homePage.mapCanvas.delete(self.master.homePage.noDataText)
 
     def openOptimisePlanPage(self):
         self.master.showPage(self.master.optimisePlanPage)
+        self.after(100, lambda: self.optimisePlanButton.configure(text_color='black', fg_color='white'))
         self.master.dataAdded.set(True)
+
+    def openInputDataPage(self):
+        self.after(100, lambda: self.inputDataButton.configure(text_color='black', fg_color='white'))
 
 class homePage(ctk.CTkFrame):
     def __init__(self, parent):
@@ -269,8 +274,6 @@ class optimisePlanPage(ctk.CTkFrame):
     def placeWidgets(self):
         self.mapContainer.pack(pady=(10,0), side='left')
         self.toolContainer.pack(side='left', fill='both', expand=True, pady=(10,0))
-        # self.tester.grid(row=0, column=0, sticky='nsew')
-        # self.tester2.grid(row=0, column=1, sticky='nsew')
         self.brushLabel.grid(row=0, column=0, rowspan=2, columnspan=2, sticky='new', pady=(5,0))
         self.pencilButton.grid(row=2, column=0, sticky='nsew', padx=2, pady=2)
         self.eraserButton.grid(row=2, column=1, sticky='nsew', padx=2, pady=2)
