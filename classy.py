@@ -177,7 +177,7 @@ class optimisePlanPage(ctk.CTkFrame):
         self.toolContainer.rowconfigure(8, weight=1)
         self.toolContainer.columnconfigure(0, weight=1)
         self.toolContainer.columnconfigure(1, weight=1)
-        self.tester = ctk.CTkFrame(self.toolContainer, bg_color='red', fg_color='red')
+        self.tester = ctk.CTkButton(self.toolContainer, bg_color='red', fg_color='red', text='')
         # self.brushLabel = ctk.CTkLabel(self.toolContainer, image=self.brush, text='')
         # self.undoButton = ctk.CTkButton(self.toolContainer, image=self.undo, text='')
         self.mapContainer = ctk.CTkFrame(self.upperFrame, corner_radius=15, border_color='black', border_width=5, bg_color='white', fg_color='white')
@@ -189,7 +189,7 @@ class optimisePlanPage(ctk.CTkFrame):
     def placeWidgets(self):
         self.mapContainer.pack(pady=(10,0), side='left')
         self.toolContainer.pack(side='left', fill='both', expand=True, pady=(10,0))
-        self.tester.grid(row=1, column=0, sticky='new')
+        self.tester.grid(row=0, column=1)
         # self.brushLabel.grid(row=0, column=0, rowspan=2, columnspan=2, sticky='new')
         # self.undoButton.grid(row=4, column=0, sticky='nsew')
         self.mapCanvas.pack(pady=10, padx=10)
