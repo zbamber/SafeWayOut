@@ -4,6 +4,7 @@ import customtkinter as ctk
 from customtkinter import CTkImage
 from PIL import Image
 import time
+import json
 
 class App(tk.Tk):
 
@@ -85,11 +86,17 @@ class Menu(ctk.CTkFrame):
         self.after(100, lambda: self.homeButton.configure(text_color='black', fg_color='white', image=self.homeDark))
         if self.master.dataAdded.get() == True:
             self.master.homePage.mapCanvas.delete(self.master.homePage.noDataText)
+            self.master.homePage.mapCanvas.display()
+
+        if app.matrix == app.optimisePlanPage.mapCanvas.matrix:
+            print('they are equal')
+        else:
+            print('they are not equal')
+
 
     def openOptimisePlanPage(self):
         self.master.showPage(self.master.optimisePlanPage)
         self.after(100, lambda: self.optimisePlanButton.configure(text_color='black', fg_color='white'))
-        self.master.dataAdded.set(True)
 
     def openInputDataPage(self):
         self.after(100, lambda: self.inputDataButton.configure(text_color='black', fg_color='white'))
@@ -223,6 +230,7 @@ class optimisePlanPage(ctk.CTkFrame):
         self.configureTextButtons(self.clearCanvasButton)
         self.configureTextButtons(self.doneButton)
         self.configureTextButtons(self.saveButton)
+        self.overwriteWarning = overwriteWarning(self)
 
     def configureTextButtons(self, button):
         button.bind('<Enter>', lambda event: button.configure(text_color='white', fg_color='black'))
@@ -233,22 +241,30 @@ class optimisePlanPage(ctk.CTkFrame):
         self.eraserButton.configure(border_width=2)
         self.lineButton.configure(border_width=2)
         self.bullseyeButton.configure(border_width=2)
+        self.pencilButton.grid_configure(pady=4)
+        self.eraserButton.grid_configure(pady=4)
+        self.lineButton.grid_configure(pady=4)
+        self.bullseyeButton.grid_configure(pady=4)
 
     def handlePencilButtonClick(self):
         self.deselectCurrentButton()
         self.pencilButton.configure(text_color='black', fg_color='white', image=self.blackPencil, border_width=4)
+        self.pencilButton.grid_configure(pady=2)
 
     def handleEraserButtonClick(self):
         self.deselectCurrentButton()
         self.eraserButton.configure(text_color='white', fg_color='black', image=self.blackEraser, border_width=4)
+        self.eraserButton.grid_configure(pady=2)
 
     def handleLineButtonClick(self):
         self.deselectCurrentButton()
         self.lineButton.configure(text_color='white', fg_color='black', image=self.blackLine, border_width=4)
+        self.lineButton.grid_configure(pady=2)
 
     def handleBullseyeButtonClick(self):
         self.deselectCurrentButton()
         self.bullseyeButton.configure(text_color='white', fg_color='black', image=self.blackBullseye, border_width=4)
+        self.bullseyeButton.grid_configure(pady=2)
 
     def handleUndoButtonClick(self):
         self.deselectCurrentButton()
@@ -265,39 +281,59 @@ class optimisePlanPage(ctk.CTkFrame):
     def handleDoneButtonClick(self):
         self.deselectCurrentButton()
         self.doneButton.configure(text_color='white', fg_color='black')
+        self.master.dataAdded.set(True)
+        self.master.matrix = [row[:] for row in self.mapCanvas.matrix]
+
 
     def handleSaveButtonClick(self):
         self.deselectCurrentButton()
         self.saveButton.configure(text_color='white', fg_color='black')
+        filePath = filedialog.asksaveasfilename()
+        filePath += '.json'
+        self.master.matrix = [row[:] for row in self.mapCanvas.matrix]
+        with open(filePath, 'w') as file:
+            json.dump(self.mapCanvas.matrix, file, indent=None)
 
+    def openFileDialog(self):
+        filePath = filedialog.askopenfilename(initialdir='/temp', title='Choose File', filetypes=[('json Files', '*.json')])
+        if self.master.dataAdded.get() == True:
+            self.overwriteWarning.place(x = 300, y = 250)
+            with open(filePath, 'r') as file:
+                self.mapCanvas.matrix = json.load(file)
+            self.master.dataAdded.set(True)
+            self.master.matrix = [row[:] for row in self.mapCanvas.matrix]
+            self.mapCanvas.display()
+        else:
+            with open(filePath, 'r') as file:
+                self.mapCanvas.matrix = json.load(file)
+            self.master.dataAdded.set(True)
+            self.master.matrix = [row[:] for row in self.mapCanvas.matrix]
+            self.mapCanvas.display()
 
     def placeWidgets(self):
         self.mapContainer.pack(pady=(10,0), side='left')
         self.toolContainer.pack(side='left', fill='both', expand=True, pady=(10,0))
         self.brushLabel.grid(row=0, column=0, rowspan=2, columnspan=2, sticky='new', pady=(5,0))
-        self.pencilButton.grid(row=2, column=0, sticky='nsew', padx=2, pady=2)
-        self.eraserButton.grid(row=2, column=1, sticky='nsew', padx=2, pady=2)
-        self.lineButton.grid(row=3, column=0, sticky='nsew', padx=2, pady=2)
-        self.bullseyeButton.grid(row=3, column=1, sticky='nsew', padx=2, pady=2)
-        self.undoButton.grid(row=4, column=0, sticky='nsew', padx=2, pady=2)
-        self.redoButton.grid(row=4, column=1, sticky='nsew', padx=2, pady=2)
-        self.clearCanvasButton.grid(row=5, column=0, sticky='nsew', columnspan=2, padx=2, pady=2)
+        self.pencilButton.grid(row=2, column=0, sticky='nsew', padx=2, pady=4)
+        self.eraserButton.grid(row=2, column=1, sticky='nsew', padx=2, pady=4)
+        self.lineButton.grid(row=3, column=0, sticky='nsew', padx=2, pady=4)
+        self.bullseyeButton.grid(row=3, column=1, sticky='nsew', padx=2, pady=4)
+        self.undoButton.grid(row=4, column=0, sticky='nsew', padx=2, pady=4)
+        self.redoButton.grid(row=4, column=1, sticky='nsew', padx=2, pady=4)
+        self.clearCanvasButton.grid(row=5, column=0, sticky='nsew', columnspan=2, padx=2, pady=4)
         self.padder.grid(row=6, column=0, columnspan=2, sticky='nsew')
-        self.doneButton.grid(row=7, column=0, sticky='nsew', columnspan=2, padx=2, pady=2)
-        self.saveButton.grid(row=8, column=0, sticky='nsew', columnspan=2, padx=2, pady=2)
+        self.doneButton.grid(row=7, column=0, sticky='nsew', columnspan=2, padx=2, pady=4)
+        self.saveButton.grid(row=8, column=0, sticky='nsew', columnspan=2, padx=2, pady=4)
         self.mapCanvas.pack(pady=10, padx=10)
         self.upperFrame.pack(fill='both', expand=True)
         self.openFile.pack(fill='y', expand=True, pady=(0,10))
-
-    def openFileDialog(self):
-        filepath = filedialog.askopenfilename(initialdir='/temp', title='Choose File', filetypes=[('all files', '*.*')])
-        print(filepath)
 
 class Canvas(ctk.CTkCanvas):
     def __init__(self, parent, height, width):
         super().__init__(parent)
         self.configure(height=height, width=width, bd=0, background='white', highlightthickness=0)
         self.pixelSize = height // 80
+        self.matrix = [[1] * 120 for _ in range(80)]
         
         
     def creation(self, event):
@@ -305,13 +341,29 @@ class Canvas(ctk.CTkCanvas):
         gridYIndex = event.y // self.pixelSize
         print(f'xclick: {gridXIndex}, yclick: {gridYIndex}')
         self.create_rectangle((self.pixelSize * (gridXIndex+1) - self.pixelSize, self.pixelSize * (gridYIndex+1) - self.pixelSize, self.pixelSize * (gridXIndex+1), self.pixelSize * (gridYIndex+1)), fill='black')
-        app.matrix[gridYIndex][gridXIndex] = 0
+        self.matrix[gridYIndex][gridXIndex] = 0
 
     def display(self):
+        print('displaying')
         for y in range(80):
             for x in range(120):
                 if app.matrix[y][x] == 0:
                     self.create_rectangle((self.pixelSize * (x+1) - self.pixelSize, self.pixelSize * (y+1) - self.pixelSize, self.pixelSize * (x+1), self.pixelSize * (y+1)), fill='black')
+
+class overwriteWarning(ctk.CTkFrame):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.configure(height=200, width=400, corner_radius=15, border_color='black', border_width=5, bg_color='white', fg_color='white')
+        self.createWidgets()
+        self.placeWidgets()
+
+    def createWidgets(self):
+        # self.warningLabel = ctk.CTkLabel(self, text='Are you sure you want to overwrite the data', text_color='red')
+        pass
+
+    def placeWidgets(self):
+        # self.warningLabel.pack()
+        pass
 
 if __name__ == '__main__':
     app = App()
