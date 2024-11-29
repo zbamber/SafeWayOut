@@ -214,7 +214,7 @@ class optimisePlanPage(ctk.CTkFrame):
         self.mapCanvas = Canvas(parent=self.mapContainer, width=960, height=640)
         self.mapCanvas.bind('<Button>', lambda event: self.mapCanvas.creation(event=event))
         self.mapCanvas.bind('<B1-Motion>', lambda event: self.mapCanvas.creation(event=event))
-        self.openFile = ctk.CTkButton(self, text='Open a file', font=('Excalifont',20), text_color='black', fg_color='white', hover_color='white', command=self.openFileDialog, image=self.upload)
+        self.openFile = ctk.CTkButton(self, text='Open a file', font=('Excalifont',20), text_color='black', fg_color='white', hover_color='white', command=self.handleOpenFileButtonClick, image=self.upload)
         self.pencilButton.bind('<Enter>', lambda event: self.pencilButton.configure(text_color='white', fg_color='black', image=self.whitePencil))
         self.pencilButton.bind('<Leave>', lambda event: self.pencilButton.configure(text_color='black', fg_color='white', image=self.blackPencil))
         self.eraserButton.bind('<Enter>', lambda event: self.eraserButton.configure(text_color='white', fg_color='black', image=self.whiteEraser))
@@ -277,6 +277,7 @@ class optimisePlanPage(ctk.CTkFrame):
     def handleClearButtonClick(self):
         self.deselectCurrentButton()
         self.clearCanvasButton.configure(text_color='white', fg_color='black')
+        self.mapCanvas.delete('all')
 
     def handleDoneButtonClick(self):
         self.deselectCurrentButton()
@@ -294,18 +295,16 @@ class optimisePlanPage(ctk.CTkFrame):
         with open(filePath, 'w') as file:
             json.dump(self.mapCanvas.matrix, file, indent=None)
 
-    def openFileDialog(self):
-        filePath = filedialog.askopenfilename(initialdir='/temp', title='Choose File', filetypes=[('json Files', '*.json')])
+    def handleOpenFileButtonClick(self):
+        self.filePath = filedialog.askopenfilename(initialdir='/temp', title='Choose File', filetypes=[('json Files', '*.json')])
         if self.master.dataAdded.get() == True:
             self.overwriteWarning.place(x = 300, y = 250)
-            with open(filePath, 'r') as file:
-                self.mapCanvas.matrix = json.load(file)
-            self.master.dataAdded.set(True)
-            self.master.matrix = [row[:] for row in self.mapCanvas.matrix]
-            self.mapCanvas.display()
         else:
-            with open(filePath, 'r') as file:
-                self.mapCanvas.matrix = json.load(file)
+            self.readFile()
+
+    def readFile(self):
+        with open(self.filePath, 'r') as file:
+            self.mapCanvas.matrix = json.load(file)
             self.master.dataAdded.set(True)
             self.master.matrix = [row[:] for row in self.mapCanvas.matrix]
             self.mapCanvas.display()
@@ -337,6 +336,7 @@ class Canvas(ctk.CTkCanvas):
         
         
     def creation(self, event):
+        self.master.master.master.master.dataAdded.set(True)
         gridXIndex = event.x // self.pixelSize
         gridYIndex = event.y // self.pixelSize
         print(f'xclick: {gridXIndex}, yclick: {gridYIndex}')
@@ -345,6 +345,7 @@ class Canvas(ctk.CTkCanvas):
 
     def display(self):
         print('displaying')
+        self.delete('all')
         for y in range(80):
             for x in range(120):
                 if app.matrix[y][x] == 0:
@@ -358,12 +359,36 @@ class overwriteWarning(ctk.CTkFrame):
         self.placeWidgets()
 
     def createWidgets(self):
-        # self.warningLabel = ctk.CTkLabel(self, text='Are you sure you want to overwrite the data', text_color='red')
-        pass
+        warnButtonStyling = {
+        'border_width':2,
+        'border_color':'black',
+        'text_color':'black',
+        'font':('Excalifont',20),
+        'fg_color':'white',
+        'corner_radius':10
+        }
+        self.warningLabel = ctk.CTkLabel(self, text='Are you sure you want to overwrite the data', text_color='black', font=('Excalifont',20))
+        self.confirmButton = ctk.CTkButton(self, text='Confirm', **warnButtonStyling, command=lambda: self.after(100, self.handleconfirmButtonClick))
+        self.cancelButton = ctk.CTkButton(self, text='Cancel', **warnButtonStyling, command=lambda: self.after(100, self.handlecancelButtonClick))
+        self.confirmButton.bind('<Enter>', lambda event: self.confirmButton.configure(text_color='white', fg_color='black'))
+        self.confirmButton.bind('<Leave>', lambda event: self.confirmButton.configure(text_color='black', fg_color='white'))
+        self.cancelButton.bind('<Enter>', lambda event: self.cancelButton.configure(text_color='white', fg_color='black'))
+        self.cancelButton.bind('<Leave>', lambda event: self.cancelButton.configure(text_color='black', fg_color='white'))
+        
 
     def placeWidgets(self):
-        # self.warningLabel.pack()
-        pass
+        self.warningLabel.pack(padx=10, pady=(10,0))
+        self.confirmButton.pack(side='left', padx=(90,10), pady=10)
+        self.cancelButton.pack(side='left', padx=10, pady=10)
+
+    def handleconfirmButtonClick(self):
+        self.confirmButton.configure(text_color='black', fg_color='white')
+        self.master.readFile()
+        self.place_forget()
+
+    def handlecancelButtonClick(self):
+        self.cancelButton.configure(text_color='black', fg_color='white')
+        self.place_forget()
 
 if __name__ == '__main__':
     app = App()
