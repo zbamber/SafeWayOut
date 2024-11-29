@@ -165,6 +165,7 @@ class homePage(ctk.CTkFrame):
 class optimisePlanPage(ctk.CTkFrame):
     def __init__(self,parent):
         super().__init__(parent)
+        self.drawing = True
         self.upload = CTkImage(light_image=Image.open('assets/upload.png'))
         self.brush = CTkImage(light_image=Image.open('assets/brush(64).png'), size=(64,64))
         self.blackPencil = CTkImage(light_image=Image.open('assets/blackPencil.png'), size=(16,16))
@@ -182,6 +183,7 @@ class optimisePlanPage(ctk.CTkFrame):
         self.configure(bg_color='white', fg_color='white')
         self.createWidgets()
         self.placeWidgets()
+        self.handlePencilButtonClick()
     
     def createWidgets(self):
         ButtonStyling = {
@@ -250,11 +252,13 @@ class optimisePlanPage(ctk.CTkFrame):
         self.deselectCurrentButton()
         self.pencilButton.configure(text_color='black', fg_color='white', image=self.blackPencil, border_width=4)
         self.pencilButton.grid_configure(pady=2)
+        self.drawing = True
 
     def handleEraserButtonClick(self):
         self.deselectCurrentButton()
         self.eraserButton.configure(text_color='white', fg_color='black', image=self.blackEraser, border_width=4)
         self.eraserButton.grid_configure(pady=2)
+        self.drawing = False
 
     def handleLineButtonClick(self):
         self.deselectCurrentButton()
@@ -337,11 +341,17 @@ class Canvas(ctk.CTkCanvas):
         
     def creation(self, event):
         self.master.master.master.master.dataAdded.set(True)
+        if self.master.master.master.drawing == True:
+            colour = 'black'
+            colourValue = 0
+        else:
+            colour = 'white'
+            colourValue = 1
         gridXIndex = event.x // self.pixelSize
         gridYIndex = event.y // self.pixelSize
         print(f'xclick: {gridXIndex}, yclick: {gridYIndex}')
-        self.create_rectangle((self.pixelSize * (gridXIndex+1) - self.pixelSize, self.pixelSize * (gridYIndex+1) - self.pixelSize, self.pixelSize * (gridXIndex+1), self.pixelSize * (gridYIndex+1)), fill='black')
-        self.matrix[gridYIndex][gridXIndex] = 0
+        self.create_rectangle((self.pixelSize * (gridXIndex+1) - self.pixelSize, self.pixelSize * (gridYIndex+1) - self.pixelSize, self.pixelSize * (gridXIndex+1), self.pixelSize * (gridYIndex+1)), fill=colour, outline=colour)
+        self.matrix[gridYIndex][gridXIndex] = colourValue
 
     def display(self):
         print('displaying')
