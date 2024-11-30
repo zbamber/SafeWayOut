@@ -163,17 +163,20 @@ class homePage(ctk.CTkFrame):
         self.grid(row=0, column=1, sticky='nsew')
 
 class dataPoint():
-    def __init__(self, x, y, prevColour):
+    def __init__(self, x, y, prevColour, colour):
        self.x = x
        self.y = y
        self.prevColour = prevColour
+       self.colour = colour
 
 class optimisePlanPage(ctk.CTkFrame):
     def __init__(self,parent):
         super().__init__(parent)
         strokeIndex = 0
-        self.drawing = True
-        self.undoStack = []
+        self.currentTool = 0
+        # self.drawing = True
+        self.previousActions = []
+        self.previousActions.append(dataPoint(-1,-1,-1,-1))
         self.upload = CTkImage(light_image=Image.open('assets/upload.png'))
         self.brush = CTkImage(light_image=Image.open('assets/brush(64).png'), size=(64,64))
         self.blackPencil = CTkImage(light_image=Image.open('assets/blackPencil.png'), size=(16,16))
@@ -222,7 +225,7 @@ class optimisePlanPage(ctk.CTkFrame):
         self.padder = ctk.CTkFrame(self.toolContainer, bg_color='white', fg_color='white')
         self.mapContainer = ctk.CTkFrame(self.upperFrame, corner_radius=15, border_color='black', border_width=5, bg_color='white', fg_color='white')
         self.mapCanvas = Canvas(parent=self.mapContainer, width=960, height=640)
-        self.mapCanvas.bind('<Button>', lambda event: self.handleDrawing(event=event)) ###################################
+        self.mapCanvas.bind('<Button>', lambda event: self.handleDrawing(event=event))
         self.mapCanvas.bind('<B1-Motion>', lambda event: self.handleDrawing(event=event))
         self.openFile = ctk.CTkButton(self, text='Open a file', font=('Excalifont',20), text_color='black', fg_color='white', hover_color='white', command=self.handleOpenFileButtonClick, image=self.upload)
         self.pencilButton.bind('<Enter>', lambda event: self.pencilButton.configure(text_color='white', fg_color='black', image=self.whitePencil))
@@ -243,14 +246,13 @@ class optimisePlanPage(ctk.CTkFrame):
         self.overwriteWarning = overwriteWarning(self)
 
     def handleDrawing(self, event):
-        
         x = event.x // self.mapCanvas.pixelSize
         y = event.y // self.mapCanvas.pixelSize
-        colourValue = self.mapCanvas.matrix[x][y]
-        print(colourValue)
-        newDataPoint = dataPoint(event.x, event.y, colourValue)
-        self.undoStack.append(newDataPoint)
-        self.mapCanvas.creation(event=event)
+        if x != self.previousActions[-1].x or y != self.previousActions[-1].y or self.currentTool != self.previousActions[-1].colour:
+            print(f'colourvalue: {self.master.matrix[y][x]}')
+            newDataPoint = dataPoint(x, y, self.master.matrix[y][x], self.currentTool)
+            self.previousActions.append(newDataPoint)
+            self.mapCanvas.creation(event=event, colourValue=self.currentTool)
 
     def configureTextButtons(self, button):
         button.bind('<Enter>', lambda event: button.configure(text_color='white', fg_color='black'))
@@ -270,13 +272,13 @@ class optimisePlanPage(ctk.CTkFrame):
         self.deselectCurrentButton()
         self.pencilButton.configure(text_color='black', fg_color='white', image=self.blackPencil, border_width=4)
         self.pencilButton.grid_configure(pady=2)
-        self.drawing = True
+        self.currentTool = 0
 
     def handleEraserButtonClick(self):
         self.deselectCurrentButton()
         self.eraserButton.configure(text_color='white', fg_color='black', image=self.blackEraser, border_width=4)
         self.eraserButton.grid_configure(pady=2)
-        self.drawing = False
+        self.currentTool = 1
 
     def handleLineButtonClick(self):
         self.deselectCurrentButton()
@@ -287,6 +289,8 @@ class optimisePlanPage(ctk.CTkFrame):
         self.deselectCurrentButton()
         self.bullseyeButton.configure(text_color='white', fg_color='black', image=self.blackBullseye, border_width=4)
         self.bullseyeButton.grid_configure(pady=2)
+        for action in self.previousActions:
+            print(f'x: {action.x}, y: {action.y}, prevColour: {action.prevColour}')
 
     def handleUndoButtonClick(self):
         self.deselectCurrentButton()
@@ -357,14 +361,13 @@ class Canvas(ctk.CTkCanvas):
         self.matrix = [[1] * 120 for _ in range(80)]
         
         
-    def creation(self, event):
-        self.master.master.master.master.dataAdded.set(True)
-        if self.master.master.master.drawing == True:
+    def creation(self, event, colourValue):
+        if colourValue == 0:
             colour = 'black'
-            colourValue = 0
         else:
             colour = 'white'
-            colourValue = 1
+
+        self.master.master.master.master.dataAdded.set(True)
         gridXIndex = event.x // self.pixelSize
         gridYIndex = event.y // self.pixelSize
         print(f'xclick: {gridXIndex}, yclick: {gridYIndex}')

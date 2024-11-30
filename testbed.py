@@ -1,9 +1,11 @@
-import tkinter as tk
-import customtkinter as ctk
+class dataPoint():
+    def __init__(self, x, y, prevColour):
+       self.x = x
+       self.y = y
+       self.prevColour = prevColour
 
 
-import inspect
-print(inspect.getsource(ctk.CTkButton._click_animation))
-
-
+previousActions = []
+previousActions.append(dataPoint(-1,-1,-1))
+print(f'x:{previousActions[-1].x} ,y: {previousActions[-1].y}, prevColour: {previousActions[-1].prevColour}')
 
