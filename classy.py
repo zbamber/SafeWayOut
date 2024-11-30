@@ -162,10 +162,18 @@ class homePage(ctk.CTkFrame):
         self.lowerContentFrame.grid(row=1, column=0, sticky='nsew', padx=10, pady=(5, 10))
         self.grid(row=0, column=1, sticky='nsew')
 
+class dataPoint():
+    def __init__(self, x, y, prevColour):
+       self.x = x
+       self.y = y
+       self.prevColour = prevColour
+
 class optimisePlanPage(ctk.CTkFrame):
     def __init__(self,parent):
         super().__init__(parent)
+        strokeIndex = 0
         self.drawing = True
+        self.undoStack = []
         self.upload = CTkImage(light_image=Image.open('assets/upload.png'))
         self.brush = CTkImage(light_image=Image.open('assets/brush(64).png'), size=(64,64))
         self.blackPencil = CTkImage(light_image=Image.open('assets/blackPencil.png'), size=(16,16))
@@ -214,8 +222,8 @@ class optimisePlanPage(ctk.CTkFrame):
         self.padder = ctk.CTkFrame(self.toolContainer, bg_color='white', fg_color='white')
         self.mapContainer = ctk.CTkFrame(self.upperFrame, corner_radius=15, border_color='black', border_width=5, bg_color='white', fg_color='white')
         self.mapCanvas = Canvas(parent=self.mapContainer, width=960, height=640)
-        self.mapCanvas.bind('<Button>', lambda event: self.mapCanvas.creation(event=event))
-        self.mapCanvas.bind('<B1-Motion>', lambda event: self.mapCanvas.creation(event=event))
+        self.mapCanvas.bind('<Button>', lambda event: self.handleDrawing(event=event)) ###################################
+        self.mapCanvas.bind('<B1-Motion>', lambda event: self.handleDrawing(event=event))
         self.openFile = ctk.CTkButton(self, text='Open a file', font=('Excalifont',20), text_color='black', fg_color='white', hover_color='white', command=self.handleOpenFileButtonClick, image=self.upload)
         self.pencilButton.bind('<Enter>', lambda event: self.pencilButton.configure(text_color='white', fg_color='black', image=self.whitePencil))
         self.pencilButton.bind('<Leave>', lambda event: self.pencilButton.configure(text_color='black', fg_color='white', image=self.blackPencil))
@@ -233,6 +241,16 @@ class optimisePlanPage(ctk.CTkFrame):
         self.configureTextButtons(self.doneButton)
         self.configureTextButtons(self.saveButton)
         self.overwriteWarning = overwriteWarning(self)
+
+    def handleDrawing(self, event):
+        
+        x = event.x // self.mapCanvas.pixelSize
+        y = event.y // self.mapCanvas.pixelSize
+        colourValue = self.mapCanvas.matrix[x][y]
+        print(colourValue)
+        newDataPoint = dataPoint(event.x, event.y, colourValue)
+        self.undoStack.append(newDataPoint)
+        self.mapCanvas.creation(event=event)
 
     def configureTextButtons(self, button):
         button.bind('<Enter>', lambda event: button.configure(text_color='white', fg_color='black'))
@@ -400,6 +418,7 @@ class overwriteWarning(ctk.CTkFrame):
         self.cancelButton.configure(text_color='black', fg_color='white')
         self.place_forget()
 
+ 
 if __name__ == '__main__':
     app = App()
     app.mainloop()
