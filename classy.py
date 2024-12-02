@@ -174,7 +174,6 @@ class optimisePlanPage(ctk.CTkFrame):
         super().__init__(parent)
         strokeIndex = 0
         self.currentTool = 0
-        # self.drawing = True
         self.previousActions = []
         self.previousActions.append(dataPoint(-1,-1,-1,-1))
         self.upload = CTkImage(light_image=Image.open('assets/upload.png'))
@@ -249,9 +248,7 @@ class optimisePlanPage(ctk.CTkFrame):
         x = event.x // self.mapCanvas.pixelSize
         y = event.y // self.mapCanvas.pixelSize
         if x != self.previousActions[-1].x or y != self.previousActions[-1].y or self.currentTool != self.previousActions[-1].colour:
-            print(f'colourvalue: {self.master.matrix[y][x]}')
-            newDataPoint = dataPoint(x, y, self.master.matrix[y][x], self.currentTool)
-            self.previousActions.append(newDataPoint)
+            self.previousActions.append(dataPoint(x, y, self.mapCanvas.matrix[y][x], self.currentTool))
             self.mapCanvas.creation(event=event, colourValue=self.currentTool)
 
     def configureTextButtons(self, button):
