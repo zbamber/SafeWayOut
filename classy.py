@@ -175,6 +175,7 @@ class optimisePlanPage(ctk.CTkFrame):
         strokeIndex = 0
         self.currentTool = 0
         self.previousActions = []
+        self.redoActions = []
         self.previousActions.append(dataPoint(-1,-1,-1,-1))
         self.upload = CTkImage(light_image=Image.open('assets/upload.png'))
         self.brush = CTkImage(light_image=Image.open('assets/brush(64).png'), size=(64,64))
@@ -249,7 +250,7 @@ class optimisePlanPage(ctk.CTkFrame):
         y = event.y // self.mapCanvas.pixelSize
         if x != self.previousActions[-1].x or y != self.previousActions[-1].y or self.currentTool != self.previousActions[-1].colour:
             self.previousActions.append(dataPoint(x, y, self.mapCanvas.matrix[y][x], self.currentTool))
-            self.mapCanvas.creation(event=event, colourValue=self.currentTool)
+            self.mapCanvas.creation(x=x, y=y, colourValue=self.currentTool)
 
     def configureTextButtons(self, button):
         button.bind('<Enter>', lambda event: button.configure(text_color='white', fg_color='black'))
@@ -292,10 +293,22 @@ class optimisePlanPage(ctk.CTkFrame):
     def handleUndoButtonClick(self):
         self.deselectCurrentButton()
         self.undoButton.configure(text_color='white', fg_color='black', image=self.blackUndo)
+        previousAction = self.previousActions.pop()
+        x = previousAction.x
+        y = previousAction.y
+        colourValue = previousAction.prevColour
+        self.redoActions.append(dataPoint(x, y, self.mapCanvas.matrix[y][x], colourValue))
+        self.mapCanvas.creation(x=x, y=y,colourValue=colourValue)
 
     def handleRedoButtonClick(self):
         self.deselectCurrentButton()
         self.redoButton.configure(text_color='white', fg_color='black', image=self.blackRedo)
+        redoAction = self.redoActions.pop()
+        x = redoAction.x
+        y = redoAction.y
+        colourValue = redoAction.prevColour
+        self.previousActions.append(dataPoint(x, y, self.mapCanvas.matrix[y][x], colourValue))
+        self.mapCanvas.creation(x=x, y=y,colourValue=colourValue)
 
     def handleClearButtonClick(self):
         self.deselectCurrentButton()
@@ -358,18 +371,16 @@ class Canvas(ctk.CTkCanvas):
         self.matrix = [[1] * 120 for _ in range(80)]
         
         
-    def creation(self, event, colourValue):
+    def creation(self, x, y, colourValue):
         if colourValue == 0:
             colour = 'black'
         else:
             colour = 'white'
 
         self.master.master.master.master.dataAdded.set(True)
-        gridXIndex = event.x // self.pixelSize
-        gridYIndex = event.y // self.pixelSize
-        print(f'xclick: {gridXIndex}, yclick: {gridYIndex}')
-        self.create_rectangle((self.pixelSize * (gridXIndex+1) - self.pixelSize, self.pixelSize * (gridYIndex+1) - self.pixelSize, self.pixelSize * (gridXIndex+1), self.pixelSize * (gridYIndex+1)), fill=colour, outline=colour)
-        self.matrix[gridYIndex][gridXIndex] = colourValue
+        print(f'drawing at x:{x}, y:{y}, colour={colour}, colourValue={colourValue}')
+        self.create_rectangle((self.pixelSize * (x+1) - self.pixelSize, self.pixelSize * (y+1) - self.pixelSize, self.pixelSize * (x+1), self.pixelSize * (y+1)), fill=colour, outline=colour)
+        self.matrix[y][x] = colourValue
 
     def display(self):
         print('displaying')
