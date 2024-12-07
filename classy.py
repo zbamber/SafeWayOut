@@ -88,12 +88,6 @@ class Menu(ctk.CTkFrame):
             self.master.homePage.mapCanvas.delete(self.master.homePage.noDataText)
             self.master.homePage.mapCanvas.display()
 
-        if app.matrix == app.optimisePlanPage.mapCanvas.matrix:
-            print('they are equal')
-        else:
-            print('they are not equal')
-
-
     def openOptimisePlanPage(self):
         self.master.showPage(self.master.optimisePlanPage)
         self.after(100, lambda: self.optimisePlanButton.configure(text_color='black', fg_color='white'))
@@ -163,11 +157,12 @@ class homePage(ctk.CTkFrame):
         self.grid(row=0, column=1, sticky='nsew')
 
 class dataPoint():
-    def __init__(self, x, y, prevColour, colour):
+    def __init__(self, x, y, prevColour, colour, dragIndex):
        self.x = x
        self.y = y
        self.prevColour = prevColour
        self.colour = colour
+       self.dragIndex = dragIndex
 
 class optimisePlanPage(ctk.CTkFrame):
     def __init__(self,parent):
@@ -176,7 +171,9 @@ class optimisePlanPage(ctk.CTkFrame):
         self.currentTool = 0
         self.previousActions = []
         self.redoActions = []
-        self.previousActions.append(dataPoint(-1,-1,-1,-1))
+        self.dragIndex = -1
+        self.previousActions.append(dataPoint(-1,-1,-1,-1,-1))
+        self.redoActions.append(dataPoint(-1,-1,-1,-1,-1))
         self.upload = CTkImage(light_image=Image.open('assets/upload.png'))
         self.brush = CTkImage(light_image=Image.open('assets/brush(64).png'), size=(64,64))
         self.blackPencil = CTkImage(light_image=Image.open('assets/blackPencil.png'), size=(16,16))
@@ -225,8 +222,8 @@ class optimisePlanPage(ctk.CTkFrame):
         self.padder = ctk.CTkFrame(self.toolContainer, bg_color='white', fg_color='white')
         self.mapContainer = ctk.CTkFrame(self.upperFrame, corner_radius=15, border_color='black', border_width=5, bg_color='white', fg_color='white')
         self.mapCanvas = Canvas(parent=self.mapContainer, width=960, height=640)
-        self.mapCanvas.bind('<Button>', lambda event: self.handleDrawing(event=event))
-        self.mapCanvas.bind('<B1-Motion>', lambda event: self.handleDrawing(event=event))
+        self.mapCanvas.bind('<Button>', lambda event: self.handleDrawing(event=event, drag=False))
+        self.mapCanvas.bind('<B1-Motion>', lambda event: self.handleDrawing(event=event, drag=True))
         self.openFile = ctk.CTkButton(self, text='Open a file', font=('Excalifont',20), text_color='black', fg_color='white', hover_color='white', command=self.handleOpenFileButtonClick, image=self.upload)
         self.pencilButton.bind('<Enter>', lambda event: self.pencilButton.configure(text_color='white', fg_color='black', image=self.whitePencil))
         self.pencilButton.bind('<Leave>', lambda event: self.pencilButton.configure(text_color='black', fg_color='white', image=self.blackPencil))
@@ -245,11 +242,14 @@ class optimisePlanPage(ctk.CTkFrame):
         self.configureTextButtons(self.saveButton)
         self.overwriteWarning = overwriteWarning(self)
 
-    def handleDrawing(self, event):
+    def handleDrawing(self, event, drag):
         x = event.x // self.mapCanvas.pixelSize
         y = event.y // self.mapCanvas.pixelSize
         if x != self.previousActions[-1].x or y != self.previousActions[-1].y or self.currentTool != self.previousActions[-1].colour:
-            self.previousActions.append(dataPoint(x, y, self.mapCanvas.matrix[y][x], self.currentTool))
+            if drag != True:
+                self.dragIndex += 1
+            print(f'dragIndex:{self.dragIndex}')
+            self.previousActions.append(dataPoint(x, y, self.mapCanvas.matrix[y][x], self.currentTool, self.dragIndex))
             self.mapCanvas.creation(x=x, y=y, colourValue=self.currentTool)
 
     def configureTextButtons(self, button):
@@ -282,33 +282,43 @@ class optimisePlanPage(ctk.CTkFrame):
         self.deselectCurrentButton()
         self.lineButton.configure(text_color='white', fg_color='black', image=self.blackLine, border_width=4)
         self.lineButton.grid_configure(pady=2)
+        for action in self.redoActions:
+            print(f'x: {action.x}, y: {action.y}, prevColour: {action.prevColour}, dragIndex:{action.dragIndex}')
 
     def handleBullseyeButtonClick(self):
         self.deselectCurrentButton()
         self.bullseyeButton.configure(text_color='white', fg_color='black', image=self.blackBullseye, border_width=4)
         self.bullseyeButton.grid_configure(pady=2)
         for action in self.previousActions:
-            print(f'x: {action.x}, y: {action.y}, prevColour: {action.prevColour}')
+            print(f'x: {action.x}, y: {action.y}, prevColour: {action.prevColour}, dragIndex:{action.dragIndex}')
 
     def handleUndoButtonClick(self):
         self.deselectCurrentButton()
         self.undoButton.configure(text_color='white', fg_color='black', image=self.blackUndo)
-        previousAction = self.previousActions.pop()
-        x = previousAction.x
-        y = previousAction.y
-        colourValue = previousAction.prevColour
-        self.redoActions.append(dataPoint(x, y, self.mapCanvas.matrix[y][x], colourValue))
-        self.mapCanvas.creation(x=x, y=y,colourValue=colourValue)
+        while self.previousActions:
+            previousAction = self.previousActions.pop()
+            x = previousAction.x
+            y = previousAction.y
+            colourValue = previousAction.prevColour
+            dragIndex = previousAction.dragIndex + 1
+            self.redoActions.append(dataPoint(x, y, self.mapCanvas.matrix[y][x], colourValue, dragIndex))
+            self.mapCanvas.creation(x=x, y=y,colourValue=colourValue)
+            if not self.previousActions or self.previousActions[-1].dragIndex != previousAction.dragIndex:
+                break
 
     def handleRedoButtonClick(self):
         self.deselectCurrentButton()
         self.redoButton.configure(text_color='white', fg_color='black', image=self.blackRedo)
-        redoAction = self.redoActions.pop()
-        x = redoAction.x
-        y = redoAction.y
-        colourValue = redoAction.prevColour
-        self.previousActions.append(dataPoint(x, y, self.mapCanvas.matrix[y][x], colourValue))
-        self.mapCanvas.creation(x=x, y=y,colourValue=colourValue)
+        while self.redoActions:
+            redoAction = self.redoActions.pop()
+            x = redoAction.x
+            y = redoAction.y
+            colourValue = redoAction.prevColour
+            dragIndex = redoAction.dragIndex + 1
+            self.previousActions.append(dataPoint(x, y, self.mapCanvas.matrix[y][x], colourValue, dragIndex))
+            self.mapCanvas.creation(x=x, y=y,colourValue=colourValue)
+            if not self.redoActions or self.redoActions[-1].dragIndex != redoAction.dragIndex:
+                break
 
     def handleClearButtonClick(self):
         self.deselectCurrentButton()
@@ -383,7 +393,6 @@ class Canvas(ctk.CTkCanvas):
         self.matrix[y][x] = colourValue
 
     def display(self):
-        print('displaying')
         self.delete('all')
         for y in range(80):
             for x in range(120):
