@@ -30,6 +30,7 @@ class App(tk.Tk):
         self.menu = Menu(self)
         self.homePage = homePage(self)
         self.inputDataPage = inputDataPage(self)
+        self.optimisePlanPage = optimisePlanPage(self)
         self.resizable(False,False)
         self.matrix = [[1] * 120 for _ in range(80)]
 
@@ -39,6 +40,7 @@ class App(tk.Tk):
         print(f"Attempting to show: {page.__class__.__name__}")
         self.homePage.grid_forget()
         self.inputDataPage.grid_forget()
+        self.optimisePlanPage.grid_forget()
         page.grid(row=0, column=1, sticky='nsew')
 
 class Menu(ctk.CTkFrame):
@@ -93,6 +95,7 @@ class Menu(ctk.CTkFrame):
         self.after(100, lambda: self.inputDataButton.configure(text_color='black', fg_color='white'))
 
     def openOptimisePlanPage(self):
+        self.master.showPage(self.master.optimisePlanPage)
         self.after(100, lambda: self.optimisePlanButton.configure(text_color='black', fg_color='white'))
 
 class homePage(ctk.CTkFrame):
@@ -324,13 +327,15 @@ class inputDataPage(ctk.CTkFrame):
         self.deselectCurrentButton()
         self.clearCanvasButton.configure(text_color='white', fg_color='black')
         self.mapCanvas.delete('all')
+        for i in range(len(self.mapCanvas.matrix)):
+            for j in range(len(self.mapCanvas.matrix[i])):
+                self.mapCanvas.matrix[i][j] = 1
 
     def handleDoneButtonClick(self):
         self.deselectCurrentButton()
         self.doneButton.configure(text_color='white', fg_color='black')
         self.master.dataAdded.set(True)
         self.master.matrix = [row[:] for row in self.mapCanvas.matrix]
-
 
     def handleSaveButtonClick(self):
         self.deselectCurrentButton()
@@ -372,6 +377,41 @@ class inputDataPage(ctk.CTkFrame):
         self.mapCanvas.pack(pady=10, padx=10)
         self.upperFrame.pack(fill='both', expand=True)
         self.openFile.pack(fill='y', expand=True, pady=(0,10))
+
+class optimisePlanPage(ctk.CTkFrame):
+    def __init__(self,parent):
+        super().__init__(parent)
+        self.configure(bg_color='white', fg_color='white')
+        self.createWidgets()
+        self.placeWidgets()
+    
+    def createWidgets(self):
+        ButtonStyling = {
+        'border_width':2,
+        'border_color':'black',
+        'text_color':'black',
+        'font':('Excalifont',20),
+        'fg_color':'white',
+        'corner_radius':10
+        }
+
+        self.upperFrame = ctk.CTkFrame(self, bg_color='white', fg_color='white')
+        self.toolContainer = ctk.CTkFrame(self.upperFrame, bg_color='white', fg_color='white')
+        self.canvasContainer = ctk.CTkFrame(self.upperFrame, corner_radius=15, border_color='black', border_width=5, bg_color='white', fg_color='white')
+        self.canvas = Canvas(parent=self.canvasContainer, width=960, height=640)
+        self.showAllPaths = ctk.CTkButton(self, text='Show all Paths', **ButtonStyling, command=lambda: self.after(100, self.handleShowAllPathsClick))
+        self.showAllPaths.bind('<Enter>', lambda event: self.showAllPaths.configure(text_color='white', fg_color='black'))
+        self.showAllPaths.bind('<Leave>', lambda event: self.showAllPaths.configure(text_color='black', fg_color='white'))
+
+    def placeWidgets(self):
+        self.canvasContainer.pack(pady=(10,0), side='left')
+        self.toolContainer.pack(side='left', fill='both', expand=True, pady=(10,0))
+        self.canvas.pack(pady=10, padx=10)
+        self.upperFrame.pack(fill='both', expand=True)
+        self.showAllPaths.pack(fill='y', expand=True, pady=5, ipadx=75)
+
+    def handleShowAllPathsClick(self):
+        self.showAllPaths.configure(text_color='white', fg_color='black')
 
 class Canvas(ctk.CTkCanvas):
     def __init__(self, parent, height, width):
