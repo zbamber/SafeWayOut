@@ -29,7 +29,7 @@ class App(tk.Tk):
         self.iconbitmap('assets/fire.ico')
         self.menu = Menu(self)
         self.homePage = homePage(self)
-        self.optimisePlanPage = optimisePlanPage(self)
+        self.inputDataPage = inputDataPage(self)
         self.resizable(False,False)
         self.matrix = [[1] * 120 for _ in range(80)]
 
@@ -38,7 +38,7 @@ class App(tk.Tk):
     def showPage(self, page):
         print(f"Attempting to show: {page.__class__.__name__}")
         self.homePage.grid_forget()
-        self.optimisePlanPage.grid_forget()
+        self.inputDataPage.grid_forget()
         page.grid(row=0, column=1, sticky='nsew')
 
 class Menu(ctk.CTkFrame):
@@ -65,16 +65,16 @@ class Menu(ctk.CTkFrame):
 
         self.title = ctk.CTkLabel(self, text='Safe Way Out', fg_color='white', text_color='black', font=('Excalifont', 20))
         self.homeButton = ctk.CTkButton(self, text='   Home', image=self.homeDark, anchor='w', **menuButtonStyling, command=self.openHomePage)
-        self.optimisePlanButton = ctk.CTkButton(self, text='Optimise Plan', **menuButtonStyling, command=self.openOptimisePlanPage)
         self.inputDataButton = ctk.CTkButton(self, text='Input Data', **menuButtonStyling, command=self.openInputDataPage)
+        self.optimisePlanButton = ctk.CTkButton(self, text='Optimise Plan', **menuButtonStyling, command=self.openOptimisePlanPage)
     
     def placeMenuWidgets(self):
         self.title.pack(pady=20, padx=30)
         self.homeButton.pack(fill='x', padx=10, pady=5)
         self.homeButton.bind('<Enter>', lambda event: self.homeButton.configure(text_color='white', fg_color='black', image=self.homeLight))
         self.homeButton.bind('<Leave>', lambda event: self.homeButton.configure(text_color='black', fg_color='white', image=self.homeDark))
-        self.placeMenuButton(self.optimisePlanButton)
         self.placeMenuButton(self.inputDataButton)
+        self.placeMenuButton(self.optimisePlanButton)
 
     def placeMenuButton(self, button):
         button.pack(fill='x', padx=10, pady=5)
@@ -88,12 +88,12 @@ class Menu(ctk.CTkFrame):
             self.master.homePage.mapCanvas.delete(self.master.homePage.noDataText)
             self.master.homePage.mapCanvas.display()
 
-    def openOptimisePlanPage(self):
-        self.master.showPage(self.master.optimisePlanPage)
-        self.after(100, lambda: self.optimisePlanButton.configure(text_color='black', fg_color='white'))
-
     def openInputDataPage(self):
+        self.master.showPage(self.master.inputDataPage)
         self.after(100, lambda: self.inputDataButton.configure(text_color='black', fg_color='white'))
+
+    def openOptimisePlanPage(self):
+        self.after(100, lambda: self.optimisePlanButton.configure(text_color='black', fg_color='white'))
 
 class homePage(ctk.CTkFrame):
     def __init__(self, parent):
@@ -164,7 +164,7 @@ class dataPoint():
        self.colour = colour
        self.dragIndex = dragIndex
 
-class optimisePlanPage(ctk.CTkFrame):
+class inputDataPage(ctk.CTkFrame):
     def __init__(self,parent):
         super().__init__(parent)
         strokeIndex = 0
