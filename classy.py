@@ -396,7 +396,14 @@ class optimisePlanPage(ctk.CTkFrame):
         }
 
         self.upperFrame = ctk.CTkFrame(self, bg_color='white', fg_color='white')
-        self.toolContainer = ctk.CTkFrame(self.upperFrame, bg_color='white', fg_color='white')
+        self.rightFrame = ctk.CTkFrame(self.upperFrame, bg_color='white', fg_color='white')
+        self.rightFrame.columnconfigure(0, weight=1)
+        self.rightFrame.rowconfigure((0,1), weight=1)
+        self.rightFrame.rowconfigure(2, weight=3)
+        self.rightFrame.rowconfigure((3,4,5), weight=1)
+        self.padder = ctk.CTkFrame(self.rightFrame, bg_color='white', fg_color='white')
+        self.evacPointLabel = ctk.CTkLabel(self.rightFrame, text='Evac Point:', font=('Excalifont',20))
+        self.evacPointChoice = ctk.CTkComboBox(self.rightFrame, )
         self.canvasContainer = ctk.CTkFrame(self.upperFrame, corner_radius=15, border_color='black', border_width=5, bg_color='white', fg_color='white')
         self.canvas = Canvas(parent=self.canvasContainer, width=960, height=640)
         self.showAllPaths = ctk.CTkButton(self, text='Show all Paths', **ButtonStyling, command=lambda: self.after(100, self.handleShowAllPathsClick))
@@ -405,7 +412,7 @@ class optimisePlanPage(ctk.CTkFrame):
 
     def placeWidgets(self):
         self.canvasContainer.pack(pady=(10,0), side='left')
-        self.toolContainer.pack(side='left', fill='both', expand=True, pady=(10,0))
+        self.rightFrame.pack(side='left', fill='both', expand=True, pady=(10,0))
         self.canvas.pack(pady=10, padx=10)
         self.upperFrame.pack(fill='both', expand=True)
         self.showAllPaths.pack(fill='y', expand=True, pady=5, ipadx=75)

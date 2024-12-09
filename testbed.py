@@ -1,11 +1,24 @@
-class dataPoint():
-    def __init__(self, x, y, prevColour):
-       self.x = x
-       self.y = y
-       self.prevColour = prevColour
+import customtkinter as ctk
 
 
-previousActions = []
-previousActions.append(dataPoint(-1,-1,-1))
-print(f'x:{previousActions[-1].x} ,y: {previousActions[-1].y}, prevColour: {previousActions[-1].prevColour}')
+class MyFrame(ctk.CTkScrollableFrame):
+    def __init__(self, master, **kwargs):
+        super().__init__(master, **kwargs)
 
+        # add widgets onto the frame...
+        self.label = ctk.CTkLabel(self)
+        self.label.grid(row=0, column=0, padx=20)
+
+
+class App(ctk.CTk):
+    def __init__(self):
+        super().__init__()
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure(0, weight=1)
+
+        self.my_frame = MyFrame(master=self, width=300, height=200, corner_radius=0, fg_color="transparent")
+        self.my_frame.grid(row=0, column=0, sticky="nsew")
+
+
+app = App()
+app.mainloop()
