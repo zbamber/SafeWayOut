@@ -13,11 +13,21 @@ class MyFrame(ctk.CTkScrollableFrame):
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.grid_rowconfigure(0, weight=1)
-        self.grid_columnconfigure(0, weight=1)
+        self.geometry('1200x720')
+        self.choiceButton = Choice(self)
+        self.choiceButton.pack()
 
-        self.my_frame = MyFrame(master=self, width=300, height=200, corner_radius=0, fg_color="transparent")
-        self.my_frame.grid(row=0, column=0, sticky="nsew")
+class Choice(ctk.CTkButton):
+    def __init__(self, parent):
+        menuButtonStyling = {
+        'border_width':2,
+        'border_color':'black',
+        'text_color':'black',
+        'font':('Excalifont',20),
+        'fg_color':'white',
+        'corner_radius':10
+        }
+        super().__init__(parent, **menuButtonStyling)
 
 
 app = App()
