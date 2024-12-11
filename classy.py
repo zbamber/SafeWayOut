@@ -394,7 +394,12 @@ class optimisePlanPage(ctk.CTkFrame):
         'fg_color':'white',
         'corner_radius':10
         }
-
+        self.red = CTkImage(light_image=Image.open('assets/red.png'))
+        self.blue = CTkImage(light_image=Image.open('assets/blue.png'))
+        self.green = CTkImage(light_image=Image.open('assets/green.png'))
+        self.orange = CTkImage(light_image=Image.open('assets/orange.png'))
+        self.pink = CTkImage(light_image=Image.open('assets/pink.png'))
+        self.yellow = CTkImage(light_image=Image.open('assets/yellow.png'))
         self.upperFrame = ctk.CTkFrame(self, bg_color='white', fg_color='white')
         self.rightFrame = ctk.CTkFrame(self.upperFrame, bg_color='white', fg_color='white')
         self.rightFrame.columnconfigure(0, weight=1)
@@ -402,20 +407,84 @@ class optimisePlanPage(ctk.CTkFrame):
         self.rightFrame.rowconfigure(2, weight=3)
         self.rightFrame.rowconfigure((3,4,5), weight=1)
         self.padder = ctk.CTkFrame(self.rightFrame, bg_color='white', fg_color='white')
-        self.evacPointLabel = ctk.CTkLabel(self.rightFrame, text='Evac Point:', font=('Excalifont',20))
-        self.evacPointChoice = ctk.CTkComboBox(self.rightFrame, )
+        self.evacPointLabel = ctk.CTkLabel(self.rightFrame, text='Evac\nPoint', font=('Excalifont',20), text_color='black')
+        self.evacPointButton = ctk.CTkButton(self.rightFrame, text='', image=self.red, **ButtonStyling, command=self.handleEvacPointClick)
+        self.chooseNodeLabel = ctk.CTkLabel(self.rightFrame, text='Choose\nNode', font=('Excalifont',20), text_color='black')
+        self.chooseNodeButton = ctk.CTkButton(self.rightFrame, text='', image=self.red, **ButtonStyling, command=self.handleChooseNodeClick)
+        self.runButton = ctk.CTkButton(self.rightFrame, text='Run', **ButtonStyling)
+        self.scrollFrame = ctk.CTkScrollableFrame(self.rightFrame, bg_color='white', fg_color='white')
         self.canvasContainer = ctk.CTkFrame(self.upperFrame, corner_radius=15, border_color='black', border_width=5, bg_color='white', fg_color='white')
         self.canvas = Canvas(parent=self.canvasContainer, width=960, height=640)
         self.showAllPaths = ctk.CTkButton(self, text='Show all Paths', **ButtonStyling, command=lambda: self.after(100, self.handleShowAllPathsClick))
         self.showAllPaths.bind('<Enter>', lambda event: self.showAllPaths.configure(text_color='white', fg_color='black'))
         self.showAllPaths.bind('<Leave>', lambda event: self.showAllPaths.configure(text_color='black', fg_color='white'))
 
+        ButtonConfig = {
+        'master':self.scrollFrame,
+        'border_width':2,
+        'border_color':'black',
+        'text_color':'black',
+        'font':('Excalifont',20),
+        'fg_color':'white',
+        'corner_radius':10,
+        'text':''
+        }
+
+        
+        self.redButton = ctk.CTkButton(**ButtonConfig, image=self.red, command=lambda: self.after(100, self.handleRedButtonClick))
+        self.redButton.bind('<Enter>', lambda event: self.buttonEnter())
+        self.redButton.bind('<Leave>', lambda event: self.buttonLeave())
+        self.blueButton = ctk.CTkButton(**ButtonConfig, image=self.blue)
+        self.greenButton = ctk.CTkButton(**ButtonConfig, image=self.green)
+        self.orangeButton = ctk.CTkButton(**ButtonConfig, image=self.orange)
+        self.pinkButton = ctk.CTkButton(**ButtonConfig, image=self.pink)
+        self.yellowButton = ctk.CTkButton(**ButtonConfig, image=self.yellow)
+    
+        Buttons=[self.redButton, self.blueButton, self.greenButton, self.orangeButton, self.pinkButton, self.yellowButton]
+        
+        for button in Buttons:
+            button.bind('<Enter>', lambda event: self.buttonEnter(button))
+            button.bind('<Leave>', lambda event: self.buttonLeave(button))
+
+    def buttonEnter(self,button):
+        button.configure(border_width=4)
+        button.pack_configure(pady=0)
+
+    def buttonLeave(self,button):
+        button.configure(border_width=2)
+        button.pack_configure(pady=2)
+    
     def placeWidgets(self):
         self.canvasContainer.pack(pady=(10,0), side='left')
         self.rightFrame.pack(side='left', fill='both', expand=True, pady=(10,0))
         self.canvas.pack(pady=10, padx=10)
         self.upperFrame.pack(fill='both', expand=True)
         self.showAllPaths.pack(fill='y', expand=True, pady=5, ipadx=75)
+        self.padder.grid(column=0, row=2, sticky='nsew')
+        self.evacPointLabel.grid(column=0, row=0, sticky='nsew', padx=5)
+        self.evacPointButton.grid(column=0, row=1, sticky='nsew', padx=5)
+        self.chooseNodeLabel.grid(column=0, row=3, sticky='nsew', padx=5)
+        self.chooseNodeButton.grid(column=0, row=4, sticky='nsew', padx=5)
+        self.runButton.grid(column=0, row=5, sticky='nsew', padx=5, pady=(5,0))
+
+    def handleEvacPointClick(self):
+        self.nodeChooser()
+
+    def handleChooseNodeClick(self):
+        self.nodeChooser()
+
+    def nodeChooser(self):
+        self.scrollFrame.grid(column=0, row=2, sticky='nsew')
+
+        self.redButton.pack(pady=2)
+        self.blueButton.pack(pady=2)
+        self.greenButton.pack(pady=2)
+        self.orangeButton.pack(pady=2)
+        self.pinkButton.pack(pady=2)
+        self.yellowButton.pack(pady=2)
+
+    def handleRedButtonClick(self):
+        self.redButton.configure(state='disabled')
 
     def handleShowAllPathsClick(self):
         self.showAllPaths.configure(text_color='white', fg_color='black')
