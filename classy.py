@@ -170,7 +170,7 @@ class dataPoint():
 class inputDataPage(ctk.CTkFrame):
     def __init__(self,parent):
         super().__init__(parent)
-        strokeIndex = 0
+        self.nextColorValue = 2
         self.currentTool = 0
         self.previousActions = []
         self.redoActions = []
@@ -253,6 +253,8 @@ class inputDataPage(ctk.CTkFrame):
                 self.dragIndex += 1
             print(f'dragIndex:{self.dragIndex}')
             self.previousActions.append(dataPoint(x, y, self.mapCanvas.matrix[y][x], self.currentTool, self.dragIndex))
+            if self.mapCanvas.matrix[y][x] > 2:
+                self.nextColorValue -= 1
             self.mapCanvas.creation(x=x, y=y, colourValue=self.currentTool)
 
     def configureTextButtons(self, button):
@@ -292,8 +294,10 @@ class inputDataPage(ctk.CTkFrame):
         self.deselectCurrentButton()
         self.bullseyeButton.configure(text_color='white', fg_color='black', image=self.blackBullseye, border_width=4)
         self.bullseyeButton.grid_configure(pady=2)
-        for action in self.previousActions:
-            print(f'x: {action.x}, y: {action.y}, prevColour: {action.prevColour}, dragIndex:{action.dragIndex}')
+        self.currentTool = self.nextColorValue
+        if self.nextColorValue < 7:
+            self.nextColorValue += 1
+
 
     def handleUndoButtonClick(self):
         self.deselectCurrentButton()
@@ -317,6 +321,8 @@ class inputDataPage(ctk.CTkFrame):
             x = redoAction.x
             y = redoAction.y
             colourValue = redoAction.prevColour
+            if colourValue > 1:
+                self.nextColorValue += 1
             dragIndex = redoAction.dragIndex + 1
             self.previousActions.append(dataPoint(x, y, self.mapCanvas.matrix[y][x], colourValue, dragIndex))
             self.mapCanvas.creation(x=x, y=y,colourValue=colourValue)
@@ -383,6 +389,7 @@ class optimisePlanPage(ctk.CTkFrame):
         super().__init__(parent)
         self.configure(bg_color='white', fg_color='white')
         self.createWidgets()
+        self.setButtonImages()
         self.placeWidgets()
     
     def createWidgets(self):
@@ -394,6 +401,10 @@ class optimisePlanPage(ctk.CTkFrame):
         'fg_color':'white',
         'corner_radius':10
         }
+        self.startOrEndNode = ""
+        self.evacPoint = -1
+        self.startNode = -1
+        self.fire = CTkImage(light_image=Image.open('assets/fire.png'))
         self.red = CTkImage(light_image=Image.open('assets/red.png'))
         self.blue = CTkImage(light_image=Image.open('assets/blue.png'))
         self.green = CTkImage(light_image=Image.open('assets/green.png'))
@@ -408,9 +419,9 @@ class optimisePlanPage(ctk.CTkFrame):
         self.rightFrame.rowconfigure((3,4,5), weight=1)
         self.padder = ctk.CTkFrame(self.rightFrame, bg_color='white', fg_color='white')
         self.evacPointLabel = ctk.CTkLabel(self.rightFrame, text='Evac\nPoint', font=('Excalifont',20), text_color='black')
-        self.evacPointButton = ctk.CTkButton(self.rightFrame, text='', image=self.red, **ButtonStyling, command=self.handleEvacPointClick)
+        self.evacPointButton = ctk.CTkButton(self.rightFrame, text='', **ButtonStyling, command=lambda:self.after(100, self.handleEvacPointClick))
         self.chooseNodeLabel = ctk.CTkLabel(self.rightFrame, text='Choose\nNode', font=('Excalifont',20), text_color='black')
-        self.chooseNodeButton = ctk.CTkButton(self.rightFrame, text='', image=self.red, **ButtonStyling, command=self.handleChooseNodeClick)
+        self.chooseNodeButton = ctk.CTkButton(self.rightFrame, text='', **ButtonStyling, command=lambda:self.after(100, self.handleChooseNodeClick))
         self.runButton = ctk.CTkButton(self.rightFrame, text='Run', **ButtonStyling)
         self.scrollFrame = ctk.CTkScrollableFrame(self.rightFrame, bg_color='white', fg_color='white')
         self.canvasContainer = ctk.CTkFrame(self.upperFrame, corner_radius=15, border_color='black', border_width=5, bg_color='white', fg_color='white')
@@ -431,20 +442,67 @@ class optimisePlanPage(ctk.CTkFrame):
         }
 
         
-        self.redButton = ctk.CTkButton(**ButtonConfig, image=self.red, command=lambda: self.after(100, self.handleRedButtonClick))
-        self.redButton.bind('<Enter>', lambda event: self.buttonEnter())
-        self.redButton.bind('<Leave>', lambda event: self.buttonLeave())
-        self.blueButton = ctk.CTkButton(**ButtonConfig, image=self.blue)
-        self.greenButton = ctk.CTkButton(**ButtonConfig, image=self.green)
-        self.orangeButton = ctk.CTkButton(**ButtonConfig, image=self.orange)
-        self.pinkButton = ctk.CTkButton(**ButtonConfig, image=self.pink)
-        self.yellowButton = ctk.CTkButton(**ButtonConfig, image=self.yellow)
+        self.redButton = ctk.CTkButton(**ButtonConfig, image=self.red, command=lambda: self.after(100, self.handleNodeChoiceButtonClick(self.redButton)))
+        self.blueButton = ctk.CTkButton(**ButtonConfig, image=self.blue, command=lambda: self.after(100, self.handleNodeChoiceButtonClick(self.blueButton)))
+        self.greenButton = ctk.CTkButton(**ButtonConfig, image=self.green, command=lambda: self.after(100, self.handleNodeChoiceButtonClick(self.greenButton)))
+        self.orangeButton = ctk.CTkButton(**ButtonConfig, image=self.orange, command=lambda: self.after(100, self.handleNodeChoiceButtonClick(self.orangeButton)))
+        self.pinkButton = ctk.CTkButton(**ButtonConfig, image=self.pink, command=lambda: self.after(100, self.handleNodeChoiceButtonClick(self.pinkButton)))
+        self.yellowButton = ctk.CTkButton(**ButtonConfig, image=self.yellow, command=lambda: self.after(100, self.handleNodeChoiceButtonClick(self.yellowButton)))
     
-        Buttons=[self.redButton, self.blueButton, self.greenButton, self.orangeButton, self.pinkButton, self.yellowButton]
+        self.Buttons={self.redButton:2, self.blueButton:3, self.greenButton:4, self.orangeButton:5, self.pinkButton:6, self.yellowButton:7}
         
-        for button in Buttons:
-            button.bind('<Enter>', lambda event: self.buttonEnter(button))
-            button.bind('<Leave>', lambda event: self.buttonLeave(button))
+        for button, value in self.Buttons.items():
+            button.bind('<Enter>', lambda event, b=button: self.buttonEnter(b))
+            button.bind('<Leave>', lambda event, b=button: self.buttonLeave(b))
+
+    def setButtonImages(self):
+        match self.evacPoint:
+            case -1:
+                self.evacPointButton.configure(image=self.fire)
+            case 2:
+                self.evacPointButton.configure(image=self.red)
+            case 3:
+                self.evacPointButton.configure(image=self.blue)
+            case 4:
+                self.evacPointButton.configure(image=self.green)
+            case 5:
+                self.evacPointButton.configure(image=self.orange)
+            case 6:
+                self.evacPointButton.configure(image=self.pink)
+            case 7:
+                self.evacPointButton.configure(image=self.yellow)
+
+
+        match self.startNode:
+            case -1:
+                self.chooseNodeButton.configure(image=self.fire)
+            case 2:
+                self.chooseNodeButton.configure(image=self.red)
+            case 3:
+                self.chooseNodeButton.configure(image=self.blue)
+            case 4:
+                self.chooseNodeButton.configure(image=self.green)
+            case 5:
+                self.chooseNodeButton.configure(image=self.orange)
+            case 6:
+                self.chooseNodeButton.configure(image=self.pink)
+            case 7:
+                self.chooseNodeButton.configure(image=self.yellow)
+    
+    def resetButtons(self):
+        for button, value in self.Buttons.items():
+            button.configure(state='enabled', fg_color='white')
+
+    def handleNodeChoiceButtonClick(self,button):
+        self.resetButtons()
+        grey = "#AAAFB4"
+        button.configure(state='disabled', fg_color=grey)
+        if self.startOrEndNode == "start":
+            self.startNode = self.Buttons[button]
+        else:
+            self.evacPoint = self.Buttons[button]
+        self.setButtonImages()
+        self.scrollFrame.grid_forget()
 
     def buttonEnter(self,button):
         button.configure(border_width=4)
@@ -468,9 +526,11 @@ class optimisePlanPage(ctk.CTkFrame):
         self.runButton.grid(column=0, row=5, sticky='nsew', padx=5, pady=(5,0))
 
     def handleEvacPointClick(self):
+        self.startOrEndNode = "end"
         self.nodeChooser()
 
     def handleChooseNodeClick(self):
+        self.startOrEndNode = "start"
         self.nodeChooser()
 
     def nodeChooser(self):
@@ -482,9 +542,6 @@ class optimisePlanPage(ctk.CTkFrame):
         self.orangeButton.pack(pady=2)
         self.pinkButton.pack(pady=2)
         self.yellowButton.pack(pady=2)
-
-    def handleRedButtonClick(self):
-        self.redButton.configure(state='disabled')
 
     def handleShowAllPathsClick(self):
         self.showAllPaths.configure(text_color='white', fg_color='black')
@@ -498,10 +555,14 @@ class Canvas(ctk.CTkCanvas):
         
         
     def creation(self, x, y, colourValue):
-        if colourValue == 0:
-            colour = 'black'
-        else:
-            colour = 'white'
+        
+        match colourValue:
+            case 0:
+                colour = 'black'
+            case 1:
+                colour = 'white'
+            case 2:
+                colour = 'red'
 
         self.master.master.master.master.dataAdded.set(True)
         print(f'drawing at x:{x}, y:{y}, colour={colour}, colourValue={colourValue}')
