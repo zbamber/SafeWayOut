@@ -170,7 +170,7 @@ class dataPoint():
 class inputDataPage(ctk.CTkFrame):
     def __init__(self,parent):
         super().__init__(parent)
-        self.nextColorValue = 2
+        self.nodes = {2:True,3:True,4:True,5:True,6:True,7:True}
         self.currentTool = 0
         self.previousActions = []
         self.redoActions = []
@@ -248,19 +248,34 @@ class inputDataPage(ctk.CTkFrame):
     def handleDrawing(self, event, drag):
         x = event.x // self.mapCanvas.pixelSize
         y = event.y // self.mapCanvas.pixelSize
-        if x != self.previousActions[-1].x or y != self.previousActions[-1].y or self.currentTool != self.previousActions[-1].colour:
+        if x != self.previousActions[-1].x or y != self.previousActions[-1].y or self.currentTool != self.previousActions[-1].colour and self.previousActions[-1].colour < 2:
             if drag != True:
                 self.dragIndex += 1
-            print(f'dragIndex:{self.dragIndex}')
-            self.previousActions.append(dataPoint(x, y, self.mapCanvas.matrix[y][x], self.currentTool, self.dragIndex))
-            if self.mapCanvas.matrix[y][x] > 2:
-                self.nextColorValue -= 1
-            self.mapCanvas.creation(x=x, y=y, colourValue=self.currentTool)
+            if self.mapCanvas.matrix[y][x] > 1:
+                self.nodes[self.mapCanvas.matrix[y][x]] = True
+                self.bullseyeButton.configure(state='normal')
+            if self.currentTool < 2 or self.nodes[self.currentTool] == True:
+                self.previousActions.append(dataPoint(x, y, self.mapCanvas.matrix[y][x], self.currentTool, self.dragIndex))
+                self.mapCanvas.creation(x=x, y=y, colourValue=self.currentTool)
+            if self.currentTool > 1:
+                self.nodes[self.currentTool] = False
+                for node, available in self.nodes.items():
+                    if available == True:
+                        self.currentTool = node
+                        break
+                    elif node == 7:
+                        self.noNodesLeft()
+
 
     def configureTextButtons(self, button):
         button.bind('<Enter>', lambda event: button.configure(text_color='white', fg_color='black'))
         button.bind('<Leave>', lambda event: button.configure(text_color='black', fg_color='white'))
-    
+
+    def noNodesLeft(self):
+        self.currentTool = 0
+        self.bullseyeButton.configure(state='disabled')
+        self.deselectCurrentButton()
+
     def deselectCurrentButton(self):
         self.pencilButton.configure(border_width=2)
         self.eraserButton.configure(border_width=2)
@@ -294,9 +309,10 @@ class inputDataPage(ctk.CTkFrame):
         self.deselectCurrentButton()
         self.bullseyeButton.configure(text_color='white', fg_color='black', image=self.blackBullseye, border_width=4)
         self.bullseyeButton.grid_configure(pady=2)
-        self.currentTool = self.nextColorValue
-        if self.nextColorValue < 7:
-            self.nextColorValue += 1
+        for node, available in self.nodes.items():
+            if available == True:
+                self.currentTool = node
+                break
 
 
     def handleUndoButtonClick(self):
@@ -308,6 +324,13 @@ class inputDataPage(ctk.CTkFrame):
             y = previousAction.y
             colourValue = previousAction.prevColour
             dragIndex = previousAction.dragIndex + 1
+            if colourValue > 1 and self.nodes[colourValue] == True:
+                self.nodes[colourValue] = False
+            elif colourValue > 1 and self.nodes[colourValue] == False:
+                break
+            if self.mapCanvas.matrix[y][x] > 1:
+                self.nodes[self.mapCanvas.matrix[y][x]] = True
+                self.bullseyeButton.configure(state='normal')
             self.redoActions.append(dataPoint(x, y, self.mapCanvas.matrix[y][x], colourValue, dragIndex))
             self.mapCanvas.creation(x=x, y=y,colourValue=colourValue)
             if not self.previousActions or self.previousActions[-1].dragIndex != previousAction.dragIndex:
@@ -321,9 +344,13 @@ class inputDataPage(ctk.CTkFrame):
             x = redoAction.x
             y = redoAction.y
             colourValue = redoAction.prevColour
-            if colourValue > 1:
-                self.nextColorValue += 1
             dragIndex = redoAction.dragIndex + 1
+            if colourValue > 1 and self.nodes[colourValue] == True:
+                self.nodes[colourValue] = False
+            elif colourValue > 1 and self.nodes[colourValue] == False:
+                break
+            if self.mapCanvas.matrix[y][x] > 1:
+                self.nodes[self.mapCanvas.matrix[y][x]] = True
             self.previousActions.append(dataPoint(x, y, self.mapCanvas.matrix[y][x], colourValue, dragIndex))
             self.mapCanvas.creation(x=x, y=y,colourValue=colourValue)
             if not self.redoActions or self.redoActions[-1].dragIndex != redoAction.dragIndex:
@@ -555,14 +582,31 @@ class Canvas(ctk.CTkCanvas):
         
         
     def creation(self, x, y, colourValue):
-        
+        red = '#ff0000'
+        blue = '#0010ff'
+        green = '#00ff7c'
+        orange = '#ffa300'
+        pink = '#ff00cf'
+        yellow = '#fffc00'
+
         match colourValue:
             case 0:
                 colour = 'black'
             case 1:
                 colour = 'white'
             case 2:
-                colour = 'red'
+                colour = red
+            case 3:
+                colour = blue
+            case 4:
+                colour = green
+            case 5:
+                colour = orange
+            case 6:
+                colour = pink
+            case 7:
+                colour = yellow
+
 
         self.master.master.master.master.dataAdded.set(True)
         print(f'drawing at x:{x}, y:{y}, colour={colour}, colourValue={colourValue}')
