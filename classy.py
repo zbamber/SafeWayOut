@@ -96,6 +96,7 @@ class Menu(ctk.CTkFrame):
 
     def openOptimisePlanPage(self):
         self.master.showPage(self.master.optimisePlanPage)
+        self.master.optimisePlanPage.canvas.display()
         self.after(100, lambda: self.optimisePlanButton.configure(text_color='black', fg_color='white'))
 
 class homePage(ctk.CTkFrame):
