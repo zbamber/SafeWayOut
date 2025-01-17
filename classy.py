@@ -248,7 +248,12 @@ class inputDataPage(ctk.CTkFrame):
     def handleDrawing(self, event, drag):
         x = event.x // self.mapCanvas.pixelSize
         y = event.y // self.mapCanvas.pixelSize
-        if x != self.previousActions[-1].x or y != self.previousActions[-1].y or self.currentTool != self.previousActions[-1].colour and self.previousActions[-1].colour < 2:
+        print(f'x: {x}, previous x: {self.previousActions[-1].x}')
+        print(f'y: {y}, previous y: {self.previousActions[-1].y}')
+        print(f'current tool: {self.currentTool}, previous colour: {self.previousActions[-1].colour}')
+        print(f'previous colour: {self.previousActions[-1].colour}')
+        if x != self.previousActions[-1].x or y != self.previousActions[-1].y or self.currentTool != self.previousActions[-1].colour:
+            print('made it')
             if drag != True:
                 self.dragIndex += 1
             if self.mapCanvas.matrix[y][x] > 1:
