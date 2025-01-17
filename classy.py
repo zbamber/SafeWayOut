@@ -458,16 +458,18 @@ class optimisePlanPage(ctk.CTkFrame):
         self.rightFrame.rowconfigure((3,4,5), weight=1)
         self.padder = ctk.CTkFrame(self.rightFrame, bg_color='white', fg_color='white')
         self.evacPointLabel = ctk.CTkLabel(self.rightFrame, text='Evac\nPoint', font=('Excalifont',20), text_color='black')
-        self.evacPointButton = ctk.CTkButton(self.rightFrame, text='', **ButtonStyling, command=lambda:self.after(100, self.handleEvacPointClick))
+        self.evacPointButton = ctk.CTkButton(self.rightFrame, text='', **ButtonStyling, command=lambda:self.after(100, self.handleEvacPointClick), image=self.fire)
         self.chooseNodeLabel = ctk.CTkLabel(self.rightFrame, text='Choose\nNode', font=('Excalifont',20), text_color='black')
-        self.chooseNodeButton = ctk.CTkButton(self.rightFrame, text='', **ButtonStyling, command=lambda:self.after(100, self.handleChooseNodeClick))
-        self.runButton = ctk.CTkButton(self.rightFrame, text='Run', **ButtonStyling)
+        self.chooseNodeButton = ctk.CTkButton(self.rightFrame, text='', **ButtonStyling, command=lambda:self.after(100, self.handleChooseNodeClick), image=self.fire)
+        self.runButton = ctk.CTkButton(self.rightFrame, text='Run', **ButtonStyling, command=lambda: self.after(100, self.handleRunButtonClick))
         self.scrollFrame = ctk.CTkScrollableFrame(self.rightFrame, bg_color='white', fg_color='white')
         self.canvasContainer = ctk.CTkFrame(self.upperFrame, corner_radius=15, border_color='black', border_width=5, bg_color='white', fg_color='white')
         self.canvas = Canvas(parent=self.canvasContainer, width=960, height=640)
         self.showAllPaths = ctk.CTkButton(self, text='Show all Paths', **ButtonStyling, command=lambda: self.after(100, self.handleShowAllPathsClick))
-        self.showAllPaths.bind('<Enter>', lambda event: self.showAllPaths.configure(text_color='white', fg_color='black'))
-        self.showAllPaths.bind('<Leave>', lambda event: self.showAllPaths.configure(text_color='black', fg_color='white'))
+        self.handleHovering(self.evacPointButton)
+        self.handleHovering(self.chooseNodeButton)
+        self.handleHovering(self.runButton)
+        self.handleHovering(self.showAllPaths)
 
         ButtonConfig = {
         'master':self.scrollFrame,
@@ -492,6 +494,13 @@ class optimisePlanPage(ctk.CTkFrame):
         for button, value in self.Buttons.items():
             button.bind('<Enter>', lambda event, b=button: self.buttonEnter(b))
             button.bind('<Leave>', lambda event, b=button: self.buttonLeave(b))
+
+    def handleHovering(self,button):
+        button.bind('<Enter>', lambda event: button.configure(text_color='white', fg_color='black'))
+        button.bind('<Leave>', lambda event: button.configure(text_color='black', fg_color='white'))
+
+    def handleRunButtonClick(self):
+        self.runButton.configure(text_color='black', fg_color='white')
 
     def setButtonImages(self):
         match self.evacPoint:
@@ -567,6 +576,7 @@ class optimisePlanPage(ctk.CTkFrame):
         self.runButton.grid(column=0, row=5, sticky='nsew', padx=5, pady=(5,0))
 
     def handleEvacPointClick(self):
+        self.evacPointButton.configure(text_color='black', fg_color='white')
         self.startOrEndNode = "end"
         if not self.nodeChooserOpen:
             self.nodeChooser()
@@ -575,6 +585,7 @@ class optimisePlanPage(ctk.CTkFrame):
             self.nodeChooserOpen = False
 
     def handleChooseNodeClick(self):
+        self.chooseNodeButton.configure(text_color='black', fg_color='white')
         self.startOrEndNode = "start"
         if not self.nodeChooserOpen:
             self.nodeChooser()
