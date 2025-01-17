@@ -614,11 +614,32 @@ class Canvas(ctk.CTkCanvas):
         self.matrix[y][x] = colourValue
 
     def display(self):
+        red = '#ff0000'
+        blue = '#0010ff'
+        green = '#00ff7c'
+        orange = '#ffa300'
+        pink = '#ff00cf'
+        yellow = '#fffc00'
         self.delete('all')
         for y in range(80):
             for x in range(120):
-                if app.matrix[y][x] == 0:
-                    self.create_rectangle((self.pixelSize * (x+1) - self.pixelSize, self.pixelSize * (y+1) - self.pixelSize, self.pixelSize * (x+1), self.pixelSize * (y+1)), fill='black')
+                match app.matrix[y][x]:
+                    case 0:
+                        colour = 'black'
+                    case 2:
+                        colour = red
+                    case 3:
+                        colour = blue
+                    case 4:
+                        colour = green
+                    case 5:
+                        colour = orange
+                    case 6:
+                        colour = pink
+                    case 7:
+                        colour = yellow
+                if app.matrix[y][x] == 0 or app.matrix[y][x] > 1:
+                    self.create_rectangle((self.pixelSize * (x+1) - self.pixelSize, self.pixelSize * (y+1) - self.pixelSize, self.pixelSize * (x+1) - 1, self.pixelSize * (y+1) - 1), fill=colour, outline=colour)
 
 class overwriteWarning(ctk.CTkFrame):
     def __init__(self, parent):
