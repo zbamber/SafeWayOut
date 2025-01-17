@@ -33,7 +33,7 @@ class App(tk.Tk):
         self.optimisePlanPage = optimisePlanPage(self)
         self.resizable(False,False)
         self.matrix = [[1] * 120 for _ in range(80)]
-
+        self.nodePositions = {2:(-1,-1), 3:(-1,-1), 4:(-1,-1), 5:(-1,-1), 6:(-1,-1), 7:(-1,-1)}
         self.dataAdded = ctk.BooleanVar(value=False)
     
     def showPage(self, page):
@@ -254,12 +254,14 @@ class inputDataPage(ctk.CTkFrame):
                 self.dragIndex += 1
             if self.mapCanvas.matrix[y][x] > 1:
                 self.nodes[self.mapCanvas.matrix[y][x]] = True
+                app.nodePositions[self.mapCanvas.matrix[y][x]] = (-1, -1)
                 self.bullseyeButton.configure(state='normal')
             if self.currentTool < 2 or self.nodes[self.currentTool] == True:
                 self.previousActions.append(dataPoint(x, y, self.mapCanvas.matrix[y][x], self.currentTool, self.dragIndex))
                 self.mapCanvas.creation(x=x, y=y, colourValue=self.currentTool)
             if self.currentTool > 1:
                 self.nodes[self.currentTool] = False
+                app.nodePositions[self.currentTool] = (x,y)
                 for node, available in self.nodes.items():
                     if available == True:
                         self.currentTool = node
@@ -325,10 +327,12 @@ class inputDataPage(ctk.CTkFrame):
             dragIndex = previousAction.dragIndex + 1
             if colourValue > 1 and self.nodes[colourValue] == True:
                 self.nodes[colourValue] = False
+                app.nodePositions[colourValue] = (x,y)
             elif colourValue > 1 and self.nodes[colourValue] == False:
                 break
             if self.mapCanvas.matrix[y][x] > 1:
                 self.nodes[self.mapCanvas.matrix[y][x]] = True
+                app.nodePositions[self.mapCanvas.matrix[y][x]] = (-1, -1)
                 self.bullseyeButton.configure(state='normal')
             self.redoActions.append(dataPoint(x, y, self.mapCanvas.matrix[y][x], colourValue, dragIndex))
             self.mapCanvas.creation(x=x, y=y,colourValue=colourValue)
@@ -346,10 +350,12 @@ class inputDataPage(ctk.CTkFrame):
             dragIndex = redoAction.dragIndex + 1
             if colourValue > 1 and self.nodes[colourValue] == True:
                 self.nodes[colourValue] = False
+                app.nodePositions[colourValue] = (x,y)
             elif colourValue > 1 and self.nodes[colourValue] == False:
                 break
             if self.mapCanvas.matrix[y][x] > 1:
                 self.nodes[self.mapCanvas.matrix[y][x]] = True
+                app.nodePositions[self.mapCanvas.matrix[y][x]] = (-1, -1)
             self.previousActions.append(dataPoint(x, y, self.mapCanvas.matrix[y][x], colourValue, dragIndex))
             self.mapCanvas.creation(x=x, y=y,colourValue=colourValue)
             if not self.redoActions or self.redoActions[-1].dragIndex != redoAction.dragIndex:
@@ -364,6 +370,7 @@ class inputDataPage(ctk.CTkFrame):
                 self.mapCanvas.matrix[i][j] = 1
         for node, available in self.nodes.items():
             self.nodes[node] = True
+            app.nodePositions[node] = (-1, -1)
         self.bullseyeButton.configure(state='normal')
 
     def handleDoneButtonClick(self):
@@ -371,6 +378,7 @@ class inputDataPage(ctk.CTkFrame):
         self.doneButton.configure(text_color='white', fg_color='black')
         self.master.dataAdded.set(True)
         self.master.matrix = [row[:] for row in self.mapCanvas.matrix]
+        self.master.optimisePlanPage.packAvailableNodes()
 
     def handleSaveButtonClick(self):
         self.deselectCurrentButton()
@@ -434,6 +442,7 @@ class optimisePlanPage(ctk.CTkFrame):
         self.startOrEndNode = ""
         self.evacPoint = -1
         self.startNode = -1
+        self.nodeChooserOpen = False
         self.fire = CTkImage(light_image=Image.open('assets/fire.png'))
         self.red = CTkImage(light_image=Image.open('assets/red.png'))
         self.blue = CTkImage(light_image=Image.open('assets/blue.png'))
@@ -520,9 +529,12 @@ class optimisePlanPage(ctk.CTkFrame):
     def resetButtons(self):
         for button, value in self.Buttons.items():
             button.configure(state='enabled', fg_color='white')
+            button.pack_forget()
+        self.evacPoint = -1
+        self.startNode = -1
+        self.setButtonImages()
 
     def handleNodeChoiceButtonClick(self,button):
-        self.resetButtons()
         grey = "#AAAFB4"
         button.configure(state='disabled', fg_color=grey)
         if self.startOrEndNode == "start":
@@ -531,6 +543,7 @@ class optimisePlanPage(ctk.CTkFrame):
             self.evacPoint = self.Buttons[button]
         self.setButtonImages()
         self.scrollFrame.grid_forget()
+        self.nodeChooserOpen = False
 
     def buttonEnter(self,button):
         button.configure(border_width=4)
@@ -555,21 +568,29 @@ class optimisePlanPage(ctk.CTkFrame):
 
     def handleEvacPointClick(self):
         self.startOrEndNode = "end"
-        self.nodeChooser()
+        if not self.nodeChooserOpen:
+            self.nodeChooser()
+        else:
+            self.scrollFrame.grid_forget()
+            self.nodeChooserOpen = False
 
     def handleChooseNodeClick(self):
         self.startOrEndNode = "start"
-        self.nodeChooser()
+        if not self.nodeChooserOpen:
+            self.nodeChooser()
+        else:
+            self.scrollFrame.grid_forget()
+            self.nodeChooserOpen = False
+
+    def packAvailableNodes(self):
+        self.resetButtons()
+        for button, node in self.Buttons.items():
+            if app.nodePositions[node] != (-1,-1):
+                button.pack(pady=2)
 
     def nodeChooser(self):
         self.scrollFrame.grid(column=0, row=2, sticky='nsew')
-
-        self.redButton.pack(pady=2)
-        self.blueButton.pack(pady=2)
-        self.greenButton.pack(pady=2)
-        self.orangeButton.pack(pady=2)
-        self.pinkButton.pack(pady=2)
-        self.yellowButton.pack(pady=2)
+        self.nodeChooserOpen = True
 
     def handleShowAllPathsClick(self):
         self.showAllPaths.configure(text_color='white', fg_color='black')
