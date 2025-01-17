@@ -266,7 +266,6 @@ class inputDataPage(ctk.CTkFrame):
                     elif node == 7:
                         self.noNodesLeft()
 
-
     def configureTextButtons(self, button):
         button.bind('<Enter>', lambda event: button.configure(text_color='white', fg_color='black'))
         button.bind('<Leave>', lambda event: button.configure(text_color='black', fg_color='white'))
@@ -313,7 +312,6 @@ class inputDataPage(ctk.CTkFrame):
             if available == True:
                 self.currentTool = node
                 break
-
 
     def handleUndoButtonClick(self):
         self.deselectCurrentButton()
@@ -363,6 +361,9 @@ class inputDataPage(ctk.CTkFrame):
         for i in range(len(self.mapCanvas.matrix)):
             for j in range(len(self.mapCanvas.matrix[i])):
                 self.mapCanvas.matrix[i][j] = 1
+        for node, available in self.nodes.items():
+            self.nodes[node] = True
+        self.bullseyeButton.configure(state='normal')
 
     def handleDoneButtonClick(self):
         self.deselectCurrentButton()
@@ -428,6 +429,7 @@ class optimisePlanPage(ctk.CTkFrame):
         'fg_color':'white',
         'corner_radius':10
         }
+
         self.startOrEndNode = ""
         self.evacPoint = -1
         self.startNode = -1
@@ -468,7 +470,6 @@ class optimisePlanPage(ctk.CTkFrame):
         'text':''
         }
 
-        
         self.redButton = ctk.CTkButton(**ButtonConfig, image=self.red, command=lambda: self.after(100, self.handleNodeChoiceButtonClick(self.redButton)))
         self.blueButton = ctk.CTkButton(**ButtonConfig, image=self.blue, command=lambda: self.after(100, self.handleNodeChoiceButtonClick(self.blueButton)))
         self.greenButton = ctk.CTkButton(**ButtonConfig, image=self.green, command=lambda: self.after(100, self.handleNodeChoiceButtonClick(self.greenButton)))
@@ -498,7 +499,6 @@ class optimisePlanPage(ctk.CTkFrame):
                 self.evacPointButton.configure(image=self.pink)
             case 7:
                 self.evacPointButton.configure(image=self.yellow)
-
 
         match self.startNode:
             case -1:
@@ -580,7 +580,6 @@ class Canvas(ctk.CTkCanvas):
         self.pixelSize = height // 80
         self.matrix = [[1] * 120 for _ in range(80)]
         
-        
     def creation(self, x, y, colourValue):
         red = '#ff0000'
         blue = '#0010ff'
@@ -606,7 +605,6 @@ class Canvas(ctk.CTkCanvas):
                 colour = pink
             case 7:
                 colour = yellow
-
 
         self.master.master.master.master.dataAdded.set(True)
         print(f'drawing at x:{x}, y:{y}, colour={colour}, colourValue={colourValue}')
@@ -664,7 +662,6 @@ class overwriteWarning(ctk.CTkFrame):
         self.confirmButton.bind('<Leave>', lambda event: self.confirmButton.configure(text_color='black', fg_color='white'))
         self.cancelButton.bind('<Enter>', lambda event: self.cancelButton.configure(text_color='white', fg_color='black'))
         self.cancelButton.bind('<Leave>', lambda event: self.cancelButton.configure(text_color='black', fg_color='white'))
-        
 
     def placeWidgets(self):
         self.warningLabel.pack(padx=10, pady=(10,0))
