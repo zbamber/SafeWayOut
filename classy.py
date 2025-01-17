@@ -610,7 +610,7 @@ class Canvas(ctk.CTkCanvas):
 
         self.master.master.master.master.dataAdded.set(True)
         print(f'drawing at x:{x}, y:{y}, colour={colour}, colourValue={colourValue}')
-        self.create_rectangle((self.pixelSize * (x+1) - self.pixelSize, self.pixelSize * (y+1) - self.pixelSize, self.pixelSize * (x+1), self.pixelSize * (y+1)), fill=colour, outline=colour)
+        self.create_rectangle((self.pixelSize * (x+1) - self.pixelSize, self.pixelSize * (y+1) - self.pixelSize, self.pixelSize * (x+1) - 1, self.pixelSize * (y+1) - 1), fill=colour, outline=colour)
         self.matrix[y][x] = colourValue
 
     def display(self):
