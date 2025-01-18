@@ -5,6 +5,7 @@ from customtkinter import CTkImage
 from PIL import Image
 import time
 import json
+from queue import PriorityQueue
 
 class App(tk.Tk):
 
@@ -258,7 +259,7 @@ class inputDataPage(ctk.CTkFrame):
                 self.bullseyeButton.configure(state='normal')
             if self.currentTool < 2 or self.nodes[self.currentTool] == True:
                 self.previousActions.append(dataPoint(x, y, self.mapCanvas.matrix[y][x], self.currentTool, self.dragIndex))
-                self.mapCanvas.creation(x=x, y=y, colourValue=self.currentTool)
+                self.mapCanvas.creation(x,y,self.currentTool,False)
             if self.currentTool > 1:
                 self.nodes[self.currentTool] = False
                 app.nodePositions[self.currentTool] = (x,y)
@@ -335,7 +336,7 @@ class inputDataPage(ctk.CTkFrame):
                 app.nodePositions[self.mapCanvas.matrix[y][x]] = (-1, -1)
                 self.bullseyeButton.configure(state='normal')
             self.redoActions.append(dataPoint(x, y, self.mapCanvas.matrix[y][x], colourValue, dragIndex))
-            self.mapCanvas.creation(x=x, y=y,colourValue=colourValue)
+            self.mapCanvas.creation(x,y,colourValue,False)
             if not self.previousActions or self.previousActions[-1].dragIndex != previousAction.dragIndex:
                 break
 
@@ -357,7 +358,7 @@ class inputDataPage(ctk.CTkFrame):
                 self.nodes[self.mapCanvas.matrix[y][x]] = True
                 app.nodePositions[self.mapCanvas.matrix[y][x]] = (-1, -1)
             self.previousActions.append(dataPoint(x, y, self.mapCanvas.matrix[y][x], colourValue, dragIndex))
-            self.mapCanvas.creation(x=x, y=y,colourValue=colourValue)
+            self.mapCanvas.creation(x,y,colourValue, False)
             if not self.redoActions or self.redoActions[-1].dragIndex != redoAction.dragIndex:
                 break
 
@@ -501,6 +502,94 @@ class optimisePlanPage(ctk.CTkFrame):
 
     def handleRunButtonClick(self):
         self.runButton.configure(text_color='black', fg_color='white')
+        self.disableAllButtons()
+        pathfound = self.astar()
+        self.enableAllButtons()
+    
+    def astar(self):
+        tempSquareIDs = []
+        start = app.nodePositions[self.startNode]
+        end = app.nodePositions[self.evacPoint]
+        count = 0
+        openSet = PriorityQueue()
+        openSet.put((0,count,start))
+        previousNodes = {}
+        gScore = [[float("inf")] * 120 for _ in range(80)]
+        gScore[start[1]][start[0]] = 0
+        fScore = [[float("inf")] * 120 for _ in range(80)]
+        fScore[start[1]][start[0]] = self.heuristic(start,end)
+        queue = {start}
+
+        while not openSet.empty():
+            neighbors = []
+            current = openSet.get()[2]
+            queue.remove(current)
+
+            if current == end:
+                self.reconstructPath(previousNodes,end)
+                return True
+            
+            if current[1] < 79 and (self.matrix[current[1] + 1][current[0]] == 1 or self.matrix[current[1] + 1][current[0]] > 7):
+                neighbors.append((current[0], current[1] + 1))
+            if current[1] > 0 and (self.matrix[current[1] - 1][current[0]] == 1 or self.matrix[current[1] - 1][current[0]] > 7):
+                neighbors.append((current[0], current[1] - 1))
+            if current[0] < 119 and (self.matrix[current[1]][current[0] + 1] == 1 or self.matrix[current[1]][current[0] + 1] > 7):
+                neighbors.append((current[0] + 1, current[1]))
+            if current[0] > 0 and (self.matrix[current[1]][current[0] - 1] == 1 or self.matrix[current[1]][current[0] - 1] > 7):
+                neighbors.append((current[0] - 1, current[1]))
+
+            for neighbor in neighbors:
+                tempGScore = gScore[current[1]][current[0]] + 1
+                if tempGScore < gScore[neighbor[1]][neighbor[0]]:
+                    previousNodes[neighbor] = current
+                    gScore[neighbor[1]][neighbor[0]] = tempGScore
+                    fScore[neighbor[1]][neighbor[0]] = tempGScore + self.heuristic(neighbor,end)
+                    if neighbor not in queue:
+                        count += 1
+                        openSet.put((fScore[neighbor[1]][neighbor[0]], count, neighbor))
+                        queue.add(neighbor)
+                        squareID = self.canvas.creation(neighbor[0],neighbor[1],9,True)
+                        tempSquareIDs.append(squareID)
+
+            if current != start:
+                squareID = self.canvas.creation(current[0],current[1],8,True)
+                tempSquareIDs.append(squareID)
+        self.after(3000, self.deleteTemporarySquares(tempSquareIDs))
+        return False
+        
+
+    def deleteTemporarySquares(self, squareIDs):
+        for squareID in squareIDs:
+            self.canvas.delete(squareID)
+
+    def reconstructPath(self, previousNodes, end):
+        while current in previousNodes:
+            current = previousNodes[current]
+            self.canvas.creation(current[0], current[1], 8, False)
+        self.canvas.creation(end[0], end[1], 9, False)
+    
+    def heuristic(self, point1, point2):
+        x1, y1 = point1
+        x2, y2 = point2
+        return abs(x1 - x2) + abs(y1 - y2)
+
+    def disableAllButtons(self):
+        self.master.menu.homeButton.configure(state='disabled')
+        self.master.menu.inputDataButton.configure(state='disabled')
+        self.master.menu.optimisePlanButton.configure(state='disabled')
+        self.evacPointButton.configure(state='disabled')
+        self.chooseNodeButton.configure(state='disabled')
+        self.runButton.configure(state='disabled')
+        self.showAllPaths.configure(state='disabled')
+
+    def enableAllButtons(self):
+        self.master.menu.homeButton.configure(state='normal')
+        self.master.menu.inputDataButton.configure(state='normal')
+        self.master.menu.optimisePlanButton.configure(state='normal')
+        self.evacPointButton.configure(state='normal')
+        self.chooseNodeButton.configure(state='normal')
+        self.runButton.configure(state='normal')
+        self.showAllPaths.configure(state='normal')
 
     def setButtonImages(self):
         match self.evacPoint:
@@ -613,13 +702,15 @@ class Canvas(ctk.CTkCanvas):
         self.pixelSize = height // 80
         self.matrix = [[1] * 120 for _ in range(80)]
         
-    def creation(self, x, y, colourValue):
+    def creation(self, x, y, colourValue, temporary):
         red = '#ff0000'
         blue = '#0010ff'
         green = '#00ff7c'
         orange = '#ffa300'
         pink = '#ff00cf'
         yellow = '#fffc00'
+        purple = '#800080'
+        darkPurple = '#320032'
 
         match colourValue:
             case 0:
@@ -638,11 +729,19 @@ class Canvas(ctk.CTkCanvas):
                 colour = pink
             case 7:
                 colour = yellow
+            case 8:
+                colour = purple
+            case 9:
+                colour = darkPurple
 
         self.master.master.master.master.dataAdded.set(True)
         print(f'drawing at x:{x}, y:{y}, colour={colour}, colourValue={colourValue}')
-        self.create_rectangle((self.pixelSize * (x+1) - self.pixelSize, self.pixelSize * (y+1) - self.pixelSize, self.pixelSize * (x+1) - 1, self.pixelSize * (y+1) - 1), fill=colour, outline=colour)
-        self.matrix[y][x] = colourValue
+        if not temporary:
+            self.create_rectangle((self.pixelSize * (x+1) - self.pixelSize, self.pixelSize * (y+1) - self.pixelSize, self.pixelSize * (x+1) - 1, self.pixelSize * (y+1) - 1), fill=colour, outline=colour)
+            self.matrix[y][x] = colourValue
+        else:
+            squareID = self.create_rectangle((self.pixelSize * (x+1) - self.pixelSize, self.pixelSize * (y+1) - self.pixelSize, self.pixelSize * (x+1) - 1, self.pixelSize * (y+1) - 1), fill=colour, outline=colour)
+            return squareID
 
     def display(self):
         red = '#ff0000'
@@ -651,6 +750,8 @@ class Canvas(ctk.CTkCanvas):
         orange = '#ffa300'
         pink = '#ff00cf'
         yellow = '#fffc00'
+        purple = '#800080'
+        darkPurple = '#320032'
         self.delete('all')
         for y in range(80):
             for x in range(120):
@@ -669,6 +770,10 @@ class Canvas(ctk.CTkCanvas):
                         colour = pink
                     case 7:
                         colour = yellow
+                    case 8:
+                        colour = purple
+                    case 9:
+                        colour = darkPurple
                 if app.matrix[y][x] == 0 or app.matrix[y][x] > 1:
                     self.create_rectangle((self.pixelSize * (x+1) - self.pixelSize, self.pixelSize * (y+1) - self.pixelSize, self.pixelSize * (x+1) - 1, self.pixelSize * (y+1) - 1), fill=colour, outline=colour)
 
