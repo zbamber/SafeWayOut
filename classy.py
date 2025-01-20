@@ -507,6 +507,7 @@ class optimisePlanPage(ctk.CTkFrame):
         self.enableAllButtons()
     
     def astar(self):
+        self.master.optimisePlanPage.canvas.matrix = [row[:] for row in self.master.matrix]
         tempSquareIDs = []
         start = app.nodePositions[self.startNode]
         end = app.nodePositions[self.evacPoint]
@@ -520,53 +521,61 @@ class optimisePlanPage(ctk.CTkFrame):
         fScore[start[1]][start[0]] = self.heuristic(start,end)
         queue = {start}
 
-        while not openSet.empty():
+        def run_algorithm_step():
+            nonlocal count
+            if openSet.empty():
+                self.after(250, self.deleteTemporarySquares(tempSquareIDs))
+                return False
+
             neighbors = []
             current = openSet.get()[2]
             queue.remove(current)
 
             if current == end:
-                self.reconstructPath(previousNodes,end)
+                self.reconstructPath(previousNodes, start, end, current)
                 return True
-            
-            if current[1] < 79 and (self.matrix[current[1] + 1][current[0]] == 1 or self.matrix[current[1] + 1][current[0]] > 7):
+
+            if current[1] < 79 and self.canvas.matrix[current[1] + 1][current[0]] != 0:
                 neighbors.append((current[0], current[1] + 1))
-            if current[1] > 0 and (self.matrix[current[1] - 1][current[0]] == 1 or self.matrix[current[1] - 1][current[0]] > 7):
+            if current[1] > 0 and self.canvas.matrix[current[1] - 1][current[0]] != 0:
                 neighbors.append((current[0], current[1] - 1))
-            if current[0] < 119 and (self.matrix[current[1]][current[0] + 1] == 1 or self.matrix[current[1]][current[0] + 1] > 7):
+            if current[0] < 119 and self.canvas.matrix[current[1]][current[0] + 1] != 0:
                 neighbors.append((current[0] + 1, current[1]))
-            if current[0] > 0 and (self.matrix[current[1]][current[0] - 1] == 1 or self.matrix[current[1]][current[0] - 1] > 7):
+            if current[0] > 0 and self.canvas.matrix[current[1]][current[0] - 1] != 0:
                 neighbors.append((current[0] - 1, current[1]))
 
+
+            print(len(neighbors))
             for neighbor in neighbors:
                 tempGScore = gScore[current[1]][current[0]] + 1
                 if tempGScore < gScore[neighbor[1]][neighbor[0]]:
                     previousNodes[neighbor] = current
                     gScore[neighbor[1]][neighbor[0]] = tempGScore
-                    fScore[neighbor[1]][neighbor[0]] = tempGScore + self.heuristic(neighbor,end)
+                    fScore[neighbor[1]][neighbor[0]] = tempGScore + self.heuristic(neighbor, end)
                     if neighbor not in queue:
                         count += 1
                         openSet.put((fScore[neighbor[1]][neighbor[0]], count, neighbor))
                         queue.add(neighbor)
-                        squareID = self.canvas.creation(neighbor[0],neighbor[1],9,True)
+                        squareID = self.canvas.creation(neighbor[0], neighbor[1], 9, True)
                         tempSquareIDs.append(squareID)
 
             if current != start:
-                squareID = self.canvas.creation(current[0],current[1],8,True)
+                squareID = self.canvas.creation(current[0], current[1], 8, True)
                 tempSquareIDs.append(squareID)
-        self.after(3000, self.deleteTemporarySquares(tempSquareIDs))
-        return False
-        
+
+            self.after(1, run_algorithm_step)
+        run_algorithm_step()
+        return True    
 
     def deleteTemporarySquares(self, squareIDs):
         for squareID in squareIDs:
             self.canvas.delete(squareID)
 
-    def reconstructPath(self, previousNodes, end):
+    def reconstructPath(self, previousNodes, start, end, current):
         while current in previousNodes:
             current = previousNodes[current]
-            self.canvas.creation(current[0], current[1], 8, False)
-        self.canvas.creation(end[0], end[1], 9, False)
+            if current != start:
+                self.canvas.creation(current[0], current[1], 8, False)
     
     def heuristic(self, point1, point2):
         x1, y1 = point1
@@ -634,11 +643,15 @@ class optimisePlanPage(ctk.CTkFrame):
 
     def handleNodeChoiceButtonClick(self,button):
         grey = "#AAAFB4"
-        button.configure(state='disabled', fg_color=grey)
         if self.startOrEndNode == "start":
             self.startNode = self.Buttons[button]
         else:
             self.evacPoint = self.Buttons[button]
+        print(button.__class__.__name__)
+        button.configure(state='disabled', fg_color=grey)
+        for button, value in self.Buttons.items():
+            if value != self.evacPoint and value != self.startNode:
+                button.configure(state='normal', fg_color='white')
         self.setButtonImages()
         self.scrollFrame.grid_forget()
         self.nodeChooserOpen = False
