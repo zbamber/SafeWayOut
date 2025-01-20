@@ -503,14 +503,15 @@ class optimisePlanPage(ctk.CTkFrame):
     def handleRunButtonClick(self):
         self.runButton.configure(text_color='black', fg_color='white')
         self.disableAllButtons()
-        pathfound = self.astar()
+        if self.evacPoint != 0 and self.startNode != 0:
+            self.astar(self.startNode, self.evacPoint)
         self.enableAllButtons()
     
-    def astar(self):
+    def astar(self, startNode, endNode):
         self.master.optimisePlanPage.canvas.matrix = [row[:] for row in self.master.matrix]
         tempSquareIDs = []
-        start = app.nodePositions[self.startNode]
-        end = app.nodePositions[self.evacPoint]
+        start = app.nodePositions[startNode]
+        end = app.nodePositions[endNode]
         count = 0
         openSet = PriorityQueue()
         openSet.put((0,count,start))
@@ -533,6 +534,7 @@ class optimisePlanPage(ctk.CTkFrame):
 
             if current == end:
                 self.reconstructPath(previousNodes, start, end, current)
+                self.after(250, self.deleteTemporarySquares(tempSquareIDs))
                 return True
 
             if current[1] < 79 and self.canvas.matrix[current[1] + 1][current[0]] != 0:
@@ -707,7 +709,12 @@ class optimisePlanPage(ctk.CTkFrame):
 
     def handleShowAllPathsClick(self):
         self.showAllPaths.configure(text_color='white', fg_color='black')
-
+        self.disableAllButtons()
+        if self.evacPoint != -1:
+            for node, value in app.nodePositions.items():
+                if app.nodePositions[node] != (-1,-1) and node != self.evacPoint:
+                    self.astar(node, self.evacPoint)
+        self.enableAllButtons()
 class Canvas(ctk.CTkCanvas):
     def __init__(self, parent, height, width):
         super().__init__(parent)
