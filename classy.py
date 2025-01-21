@@ -87,9 +87,7 @@ class Menu(ctk.CTkFrame):
     def openHomePage(self):
         self.master.showPage(self.master.homePage)
         self.after(100, lambda: self.homeButton.configure(text_color='black', fg_color='white', image=self.homeDark))
-        if self.master.dataAdded.get() == True:
-            self.master.homePage.mapCanvas.delete(self.master.homePage.noDataText)
-            self.master.homePage.mapCanvas.display()
+        self.master.homePage.update()
 
     def openInputDataPage(self):
         self.master.showPage(self.master.inputDataPage)
@@ -109,7 +107,20 @@ class homePage(ctk.CTkFrame):
         self.columnconfigure(0, weight=1)
         self.createWidgets()
         self.placeHomePageWidgets()
+        self.noData = False
 
+    def update(self):
+        self.mapCanvas.delete('all')
+        if self.master.dataAdded.get() == True:
+            self.noData = False
+            self.mapCanvas.display()
+        else:
+            self.noData = True
+        print(f'no data: {self.noData}, dataAdded: {self.master.dataAdded.get()}')
+        if not self.noData:
+            self.mapCanvas.delete(self.noDataText)
+        else:
+            self.noDataText = self.mapCanvas.create_text(300,200, text='No Data', font=('Excalifont',20))
     def createWidgets(self):
 
         checkboxStyling = {
@@ -177,6 +188,7 @@ class inputDataPage(ctk.CTkFrame):
         self.previousActions = []
         self.redoActions = []
         self.dragIndex = -1
+        self.planInserted = False
         self.previousActions.append(dataPoint(-1,-1,-1,-1,-1))
         self.redoActions.append(dataPoint(-1,-1,-1,-1,-1))
         self.upload = CTkImage(light_image=Image.open('assets/upload.png'))
@@ -269,6 +281,8 @@ class inputDataPage(ctk.CTkFrame):
                         break
                     elif node == 7:
                         self.noNodesLeft()
+        if self.master.dataAdded.get() == True:
+            self.planInserted = True
 
     def configureTextButtons(self, button):
         button.bind('<Enter>', lambda event: button.configure(text_color='white', fg_color='black'))
@@ -373,13 +387,18 @@ class inputDataPage(ctk.CTkFrame):
             self.nodes[node] = True
             app.nodePositions[node] = (-1, -1)
         self.bullseyeButton.configure(state='normal')
+        self.planInserted = False
 
     def handleDoneButtonClick(self):
         self.deselectCurrentButton()
         self.doneButton.configure(text_color='white', fg_color='black')
-        self.master.dataAdded.set(True)
+        if self.planInserted == True:
+            self.master.dataAdded.set(True)
+        else:
+            self.master.dataAdded.set(False)
         self.master.matrix = [row[:] for row in self.mapCanvas.matrix]
         self.master.optimisePlanPage.packAvailableNodes()
+
 
     def handleSaveButtonClick(self):
         self.deselectCurrentButton()
@@ -503,7 +522,7 @@ class optimisePlanPage(ctk.CTkFrame):
     def handleRunButtonClick(self):
         self.runButton.configure(text_color='black', fg_color='white')
         self.disableAllButtons()
-        if self.evacPoint != 0 and self.startNode != 0:
+        if self.evacPoint != -1 and self.startNode != -1:
             self.astar(self.startNode, self.evacPoint)
         self.enableAllButtons()
     
@@ -535,6 +554,7 @@ class optimisePlanPage(ctk.CTkFrame):
             if current == end:
                 self.reconstructPath(previousNodes, start, end, current)
                 self.after(250, self.deleteTemporarySquares(tempSquareIDs))
+                app.matrix = [row[:] for row in self.canvas.matrix]
                 return True
 
             if current[1] < 79 and self.canvas.matrix[current[1] + 1][current[0]] != 0:
@@ -546,8 +566,6 @@ class optimisePlanPage(ctk.CTkFrame):
             if current[0] > 0 and self.canvas.matrix[current[1]][current[0] - 1] != 0:
                 neighbors.append((current[0] - 1, current[1]))
 
-
-            print(len(neighbors))
             for neighbor in neighbors:
                 tempGScore = gScore[current[1]][current[0]] + 1
                 if tempGScore < gScore[neighbor[1]][neighbor[0]]:
