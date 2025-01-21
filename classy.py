@@ -114,8 +114,10 @@ class homePage(ctk.CTkFrame):
         if self.master.dataAdded.get() == True:
             self.noData = False
             self.mapCanvas.display()
+            self.sitePlanCheckBox.select()
         else:
             self.noData = True
+            self.sitePlanCheckBox.deselect()
         print(f'no data: {self.noData}, dataAdded: {self.master.dataAdded.get()}')
         if not self.noData:
             self.mapCanvas.delete(self.noDataText)
