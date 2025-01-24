@@ -36,6 +36,7 @@ class App(tk.Tk):
         self.matrix = [[1] * 120 for _ in range(80)]
         self.nodePositions = {2:(-1,-1), 3:(-1,-1), 4:(-1,-1), 5:(-1,-1), 6:(-1,-1), 7:(-1,-1)}
         self.dataAdded = ctk.BooleanVar(value=False)
+        self.simulationRan = False
     
     def showPage(self, page):
         print(f"Attempting to show: {page.__class__.__name__}")
@@ -123,6 +124,15 @@ class homePage(ctk.CTkFrame):
             self.mapCanvas.delete(self.noDataText)
         else:
             self.noDataText = self.mapCanvas.create_text(300,200, text='No Data', font=('Excalifont',20))
+        self.placeNodesCheckBox.deselect()
+        for node, coord in app.nodePositions.items():
+            if coord != (-1,-1):
+                self.placeNodesCheckBox.select()
+                break
+        if app.simulationRan == True:
+            self.optimiseCheckBox.select()
+        else:
+            self.optimiseCheckBox.deselect()
     def createWidgets(self):
 
         checkboxStyling = {
@@ -398,6 +408,7 @@ class inputDataPage(ctk.CTkFrame):
             self.master.dataAdded.set(True)
         else:
             self.master.dataAdded.set(False)
+            app.simulationRan = False
         self.master.matrix = [row[:] for row in self.mapCanvas.matrix]
         self.master.optimisePlanPage.packAvailableNodes()
 
@@ -527,6 +538,7 @@ class optimisePlanPage(ctk.CTkFrame):
         if self.evacPoint != -1 and self.startNode != -1:
             self.astar(self.startNode, self.evacPoint)
         self.enableAllButtons()
+        app.simulationRan = True
     
     def astar(self, startNode, endNode):
         self.master.optimisePlanPage.canvas.matrix = [row[:] for row in self.master.matrix]
@@ -735,6 +747,7 @@ class optimisePlanPage(ctk.CTkFrame):
                 if app.nodePositions[node] != (-1,-1) and node != self.evacPoint:
                     self.astar(node, self.evacPoint)
         self.enableAllButtons()
+        app.simulationRan = True
 class Canvas(ctk.CTkCanvas):
     def __init__(self, parent, height, width):
         super().__init__(parent)
