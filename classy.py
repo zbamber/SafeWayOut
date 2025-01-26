@@ -6,6 +6,7 @@ from PIL import Image
 import time
 import json
 from queue import PriorityQueue
+import copy
 
 class App(tk.Tk):
 
@@ -33,7 +34,7 @@ class App(tk.Tk):
         self.inputDataPage = inputDataPage(self)
         self.optimisePlanPage = optimisePlanPage(self)
         self.resizable(False,False)
-        self.matrix = [[1] * 120 for _ in range(80)]
+        self.matrix = [[{'base': 1} for _ in range(120)] for _ in range(80)]
         self.nodePositions = {2:(-1,-1), 3:(-1,-1), 4:(-1,-1), 5:(-1,-1), 6:(-1,-1), 7:(-1,-1)}
         self.dataAdded = ctk.BooleanVar(value=False)
         self.simulationRan = False
@@ -119,7 +120,6 @@ class homePage(ctk.CTkFrame):
         else:
             self.noData = True
             self.sitePlanCheckBox.deselect()
-        print(f'no data: {self.noData}, dataAdded: {self.master.dataAdded.get()}')
         if not self.noData:
             self.mapCanvas.delete(self.noDataText)
         else:
@@ -277,12 +277,12 @@ class inputDataPage(ctk.CTkFrame):
         if x != self.previousActions[-1].x or y != self.previousActions[-1].y or self.currentTool != self.previousActions[-1].colour:
             if drag != True:
                 self.dragIndex += 1
-            if self.mapCanvas.matrix[y][x] > 1:
-                self.nodes[self.mapCanvas.matrix[y][x]] = True
-                app.nodePositions[self.mapCanvas.matrix[y][x]] = (-1, -1)
+            if self.mapCanvas.matrix[y][x]['base'] > 1:
+                self.nodes[self.mapCanvas.matrix[y][x]['base']] = True
+                app.nodePositions[self.mapCanvas.matrix[y][x]['base']] = (-1, -1)
                 self.bullseyeButton.configure(state='normal')
             if self.currentTool < 2 or self.nodes[self.currentTool] == True:
-                self.previousActions.append(dataPoint(x, y, self.mapCanvas.matrix[y][x], self.currentTool, self.dragIndex))
+                self.previousActions.append(dataPoint(x, y, self.mapCanvas.matrix[y][x]['base'], self.currentTool, self.dragIndex))
                 self.mapCanvas.creation(x,y,self.currentTool,False)
             if self.currentTool > 1:
                 self.nodes[self.currentTool] = False
@@ -357,11 +357,11 @@ class inputDataPage(ctk.CTkFrame):
                 app.nodePositions[colourValue] = (x,y)
             elif colourValue > 1 and self.nodes[colourValue] == False:
                 break
-            if self.mapCanvas.matrix[y][x] > 1:
-                self.nodes[self.mapCanvas.matrix[y][x]] = True
-                app.nodePositions[self.mapCanvas.matrix[y][x]] = (-1, -1)
+            if self.mapCanvas.matrix[y][x]['base'] > 1:
+                self.nodes[self.mapCanvas.matrix[y][x]['base']] = True
+                app.nodePositions[self.mapCanvas.matrix[y][x]['base']] = (-1, -1)
                 self.bullseyeButton.configure(state='normal')
-            self.redoActions.append(dataPoint(x, y, self.mapCanvas.matrix[y][x], colourValue, dragIndex))
+            self.redoActions.append(dataPoint(x, y, self.mapCanvas.matrix[y][x]['base'], colourValue, dragIndex))
             self.mapCanvas.creation(x,y,colourValue,False)
             if not self.previousActions or self.previousActions[-1].dragIndex != previousAction.dragIndex:
                 break
@@ -380,10 +380,10 @@ class inputDataPage(ctk.CTkFrame):
                 app.nodePositions[colourValue] = (x,y)
             elif colourValue > 1 and self.nodes[colourValue] == False:
                 break
-            if self.mapCanvas.matrix[y][x] > 1:
-                self.nodes[self.mapCanvas.matrix[y][x]] = True
-                app.nodePositions[self.mapCanvas.matrix[y][x]] = (-1, -1)
-            self.previousActions.append(dataPoint(x, y, self.mapCanvas.matrix[y][x], colourValue, dragIndex))
+            if self.mapCanvas.matrix[y][x]['base'] > 1:
+                self.nodes[self.mapCanvas.matrix[y][x]['base']] = True
+                app.nodePositions[self.mapCanvas.matrix[y][x]['base']] = (-1, -1)
+            self.previousActions.append(dataPoint(x, y, self.mapCanvas.matrix[y][x]['base'], colourValue, dragIndex))
             self.mapCanvas.creation(x,y,colourValue, False)
             if not self.redoActions or self.redoActions[-1].dragIndex != redoAction.dragIndex:
                 break
@@ -392,9 +392,9 @@ class inputDataPage(ctk.CTkFrame):
         self.deselectCurrentButton()
         self.clearCanvasButton.configure(text_color='white', fg_color='black')
         self.mapCanvas.delete('all')
-        for i in range(len(self.mapCanvas.matrix)):
-            for j in range(len(self.mapCanvas.matrix[i])):
-                self.mapCanvas.matrix[i][j] = 1
+        for y in range(len(self.mapCanvas.matrix)):
+            for x in range(len(self.mapCanvas.matrix[y])):
+                self.mapCanvas.matrix[y][x]['base'] = 1
         for node, available in self.nodes.items():
             self.nodes[node] = True
             app.nodePositions[node] = (-1, -1)
@@ -409,7 +409,7 @@ class inputDataPage(ctk.CTkFrame):
         else:
             self.master.dataAdded.set(False)
             app.simulationRan = False
-        self.master.matrix = [row[:] for row in self.mapCanvas.matrix]
+        self.master.matrix = copy.deepcopy(self.mapCanvas.matrix)
         self.master.optimisePlanPage.packAvailableNodes()
 
 
@@ -418,7 +418,7 @@ class inputDataPage(ctk.CTkFrame):
         self.saveButton.configure(text_color='white', fg_color='black')
         filePath = filedialog.asksaveasfilename()
         filePath += '.json'
-        self.master.matrix = [row[:] for row in self.mapCanvas.matrix]
+        self.master.matrix = copy.deepcopy(self.mapCanvas.matrix)
         with open(filePath, 'w') as file:
             json.dump(self.mapCanvas.matrix, file, indent=None)
 
@@ -433,7 +433,7 @@ class inputDataPage(ctk.CTkFrame):
         with open(self.filePath, 'r') as file:
             self.mapCanvas.matrix = json.load(file)
             self.master.dataAdded.set(True)
-            self.master.matrix = [row[:] for row in self.mapCanvas.matrix]
+            self.master.matrix = copy.deepcopy(self.mapCanvas.matrix)
             self.mapCanvas.display()
 
     def placeWidgets(self):
@@ -541,7 +541,7 @@ class optimisePlanPage(ctk.CTkFrame):
         app.simulationRan = True
     
     def astar(self, startNode, endNode):
-        self.master.optimisePlanPage.canvas.matrix = [row[:] for row in self.master.matrix]
+        self.master.optimisePlanPage.canvas.matrix = copy.deepcopy(self.master.matrix)
         tempSquareIDs = []
         start = app.nodePositions[startNode]
         end = app.nodePositions[endNode]
@@ -568,16 +568,16 @@ class optimisePlanPage(ctk.CTkFrame):
             if current == end:
                 self.reconstructPath(previousNodes, start, end, current)
                 self.after(250, self.deleteTemporarySquares(tempSquareIDs))
-                app.matrix = [row[:] for row in self.canvas.matrix]
+                app.matrix = copy.deepcopy(self.canvas.matrix)
                 return True
 
-            if current[1] < 79 and self.canvas.matrix[current[1] + 1][current[0]] != 0:
+            if current[1] < 79 and self.canvas.matrix[current[1] + 1][current[0]]['base'] != 0:
                 neighbors.append((current[0], current[1] + 1))
-            if current[1] > 0 and self.canvas.matrix[current[1] - 1][current[0]] != 0:
+            if current[1] > 0 and self.canvas.matrix[current[1] - 1][current[0]]['base'] != 0:
                 neighbors.append((current[0], current[1] - 1))
-            if current[0] < 119 and self.canvas.matrix[current[1]][current[0] + 1] != 0:
+            if current[0] < 119 and self.canvas.matrix[current[1]][current[0] + 1]['base'] != 0:
                 neighbors.append((current[0] + 1, current[1]))
-            if current[0] > 0 and self.canvas.matrix[current[1]][current[0] - 1] != 0:
+            if current[0] > 0 and self.canvas.matrix[current[1]][current[0] - 1]['base'] != 0:
                 neighbors.append((current[0] - 1, current[1]))
 
             for neighbor in neighbors:
@@ -753,7 +753,7 @@ class Canvas(ctk.CTkCanvas):
         super().__init__(parent)
         self.configure(height=height, width=width, bd=0, background='white', highlightthickness=0)
         self.pixelSize = height // 80
-        self.matrix = [[1] * 120 for _ in range(80)]
+        self.matrix = [[{'base': 1} for _ in range(120)] for _ in range(80)]
         
     def creation(self, x, y, colourValue, temporary):
         red = '#ff0000'
@@ -791,7 +791,7 @@ class Canvas(ctk.CTkCanvas):
         print(f'drawing at x:{x}, y:{y}, colour={colour}, colourValue={colourValue}')
         if not temporary:
             self.create_rectangle((self.pixelSize * (x+1) - self.pixelSize, self.pixelSize * (y+1) - self.pixelSize, self.pixelSize * (x+1) - 1, self.pixelSize * (y+1) - 1), fill=colour, outline=colour)
-            self.matrix[y][x] = colourValue
+            self.matrix[y][x]['base'] = colourValue
         else:
             squareID = self.create_rectangle((self.pixelSize * (x+1) - self.pixelSize, self.pixelSize * (y+1) - self.pixelSize, self.pixelSize * (x+1) - 1, self.pixelSize * (y+1) - 1), fill=colour, outline=colour)
             return squareID
@@ -808,7 +808,7 @@ class Canvas(ctk.CTkCanvas):
         self.delete('all')
         for y in range(80):
             for x in range(120):
-                match app.matrix[y][x]:
+                match app.matrix[y][x]['base']:
                     case 0:
                         colour = 'black'
                     case 2:
@@ -827,7 +827,7 @@ class Canvas(ctk.CTkCanvas):
                         colour = purple
                     case 9:
                         colour = darkPurple
-                if app.matrix[y][x] == 0 or app.matrix[y][x] > 1:
+                if app.matrix[y][x]['base'] == 0 or app.matrix[y][x]['base'] > 1:
                     self.create_rectangle((self.pixelSize * (x+1) - self.pixelSize, self.pixelSize * (y+1) - self.pixelSize, self.pixelSize * (x+1) - 1, self.pixelSize * (y+1) - 1), fill=colour, outline=colour)
 
 class overwriteWarning(ctk.CTkFrame):
