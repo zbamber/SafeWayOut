@@ -412,7 +412,6 @@ class inputDataPage(ctk.CTkFrame):
         self.master.matrix = copy.deepcopy(self.mapCanvas.matrix)
         self.master.optimisePlanPage.packAvailableNodes()
 
-
     def handleSaveButtonClick(self):
         self.deselectCurrentButton()
         self.saveButton.configure(text_color='white', fg_color='black')
@@ -566,7 +565,7 @@ class optimisePlanPage(ctk.CTkFrame):
             queue.remove(current)
 
             if current == end:
-                self.reconstructPath(previousNodes, start, end, current)
+                self.reconstructPath(previousNodes, start, current, startNode)
                 self.after(250, self.deleteTemporarySquares(tempSquareIDs))
                 app.matrix = copy.deepcopy(self.canvas.matrix)
                 return True
@@ -605,11 +604,11 @@ class optimisePlanPage(ctk.CTkFrame):
         for squareID in squareIDs:
             self.canvas.delete(squareID)
 
-    def reconstructPath(self, previousNodes, start, end, current):
+    def reconstructPath(self, previousNodes, start, current, startNode):
         while current in previousNodes:
             current = previousNodes[current]
             if current != start:
-                self.canvas.creation(current[0], current[1], 8, False)
+                self.canvas.creation(current[0], current[1], startNode+10, False)
     
     def heuristic(self, point1, point2):
         x1, y1 = point1
@@ -786,12 +785,17 @@ class Canvas(ctk.CTkCanvas):
                 colour = purple
             case 9:
                 colour = darkPurple
+            case _:
+                colour = purple
 
         self.master.master.master.master.dataAdded.set(True)
         print(f'drawing at x:{x}, y:{y}, colour={colour}, colourValue={colourValue}')
         if not temporary:
             self.create_rectangle((self.pixelSize * (x+1) - self.pixelSize, self.pixelSize * (y+1) - self.pixelSize, self.pixelSize * (x+1) - 1, self.pixelSize * (y+1) - 1), fill=colour, outline=colour)
-            self.matrix[y][x]['base'] = colourValue
+            if colourValue < 12:
+                self.matrix[y][x]['base'] = colourValue
+            else:
+                self.matrix[y][x].setdefault('paths', []).append(colourValue)
         else:
             squareID = self.create_rectangle((self.pixelSize * (x+1) - self.pixelSize, self.pixelSize * (y+1) - self.pixelSize, self.pixelSize * (x+1) - 1, self.pixelSize * (y+1) - 1), fill=colour, outline=colour)
             return squareID
