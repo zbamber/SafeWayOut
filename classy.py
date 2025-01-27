@@ -460,6 +460,18 @@ class optimisePlanPage(ctk.CTkFrame):
         self.createWidgets()
         self.setButtonImages()
         self.placeWidgets()
+        self.startOrEndNode = ""
+        self.evacPoint = -1
+        self.startNode = -1
+        self.nodeChooserOpen = False
+        self.paths = {
+            12:[],
+            13:[],
+            14:[],
+            15:[],
+            16:[],
+            17:[]
+        }
     
     def createWidgets(self):
         ButtonStyling = {
@@ -471,10 +483,6 @@ class optimisePlanPage(ctk.CTkFrame):
         'corner_radius':10
         }
 
-        self.startOrEndNode = ""
-        self.evacPoint = -1
-        self.startNode = -1
-        self.nodeChooserOpen = False
         self.fire = CTkImage(light_image=Image.open('assets/fire.png'))
         self.red = CTkImage(light_image=Image.open('assets/red.png'))
         self.blue = CTkImage(light_image=Image.open('assets/blue.png'))
@@ -609,11 +617,27 @@ class optimisePlanPage(ctk.CTkFrame):
             current = previousNodes[current]
             if current != start:
                 self.canvas.creation(current[0], current[1], startNode+10, False)
+                self.paths[startNode+10].append(current)
     
     def heuristic(self, point1, point2):
         x1, y1 = point1
         x2, y2 = point2
         return abs(x1 - x2) + abs(y1 - y2)
+
+    def runFlowSimulation(self):
+        minWidth = 3
+        problems = {}
+        for path, data in self.paths.items():
+            if self.paths[path]:
+                for position in self.paths[path]:
+                    if position[1] < 79 and path not in self.canvas.matrix[position[1] + 1][position[0]].get('paths', []):
+                        tempCount  = 0
+                    if position[1] > 0 and path not in self.canvas.matrix[position[1] - 1][position[0]].get('paths', []):
+                        tempCount  = 0
+                    if position[0] < 119 and path not in self.canvas.matrix[position[1]][position[0] + 1].get('paths', []):
+                        tempCount  = 0
+                    if position[0] > 0 and path not in self.canvas.matrix[position[1]][position[0] - 1].get('paths', []):
+                        tempCount  = 0
 
     def disableAllButtons(self):
         self.master.menu.homeButton.configure(state='disabled')
