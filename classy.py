@@ -630,14 +630,21 @@ class optimisePlanPage(ctk.CTkFrame):
         for path, data in self.paths.items():
             if self.paths[path]:
                 for position in self.paths[path]:
-                    if position[1] < 79 and path not in self.canvas.matrix[position[1] + 1][position[0]].get('paths', []):
-                        tempCount  = 0
-                    if position[1] > 0 and path not in self.canvas.matrix[position[1] - 1][position[0]].get('paths', []):
-                        tempCount  = 0
-                    if position[0] < 119 and path not in self.canvas.matrix[position[1]][position[0] + 1].get('paths', []):
-                        tempCount  = 0
-                    if position[0] > 0 and path not in self.canvas.matrix[position[1]][position[0] - 1].get('paths', []):
-                        tempCount  = 0
+                    pathWidth = 1
+                    if position[1] < 79 and path not in self.canvas.matrix[position[1] + 1][position[0]].get('paths', []): # up
+                        tempCount  = 1
+                        while True:
+                            if position[1] + tempCount < 79 and self.canvas.matrix[position[1] + tempCount][position[0]]['base'] != 0:
+                                tempCount += 1
+                            else:
+                                pathWidth += tempCount
+                                break
+                    if position[1] > 0 and path not in self.canvas.matrix[position[1] - 1][position[0]].get('paths', []): # down
+                        tempCount  = 1
+                    if position[0] < 119 and path not in self.canvas.matrix[position[1]][position[0] + 1].get('paths', []): # right
+                        tempCount  = 1
+                    if position[0] > 0 and path not in self.canvas.matrix[position[1]][position[0] - 1].get('paths', []): # left
+                        tempCount  = 1
 
     def disableAllButtons(self):
         self.master.menu.homeButton.configure(state='disabled')
