@@ -631,20 +631,37 @@ class optimisePlanPage(ctk.CTkFrame):
             if self.paths[path]:
                 for position in self.paths[path]:
                     pathWidth = 1
-                    if position[1] < 79 and path not in self.canvas.matrix[position[1] + 1][position[0]].get('paths', []): # up
-                        tempCount  = 1
+                    if position[1] < 79 and path not in self.canvas.matrix[position[1] + 1][position[0]].get('paths', []) and position[1] > 0 and path not in self.canvas.matrix[position[1] - 1][position[0]].get('paths', []): # path is horizontal
+                        tempCount  = 0
                         while True:
-                            if position[1] + tempCount < 79 and self.canvas.matrix[position[1] + tempCount][position[0]]['base'] != 0:
+                            if position[1] + tempCount + 1< 79 and self.canvas.matrix[position[1] + tempCount + 1][position[0]]['base'] != 0:
                                 tempCount += 1
                             else:
                                 pathWidth += tempCount
                                 break
-                    if position[1] > 0 and path not in self.canvas.matrix[position[1] - 1][position[0]].get('paths', []): # down
-                        tempCount  = 1
-                    if position[0] < 119 and path not in self.canvas.matrix[position[1]][position[0] + 1].get('paths', []): # right
-                        tempCount  = 1
-                    if position[0] > 0 and path not in self.canvas.matrix[position[1]][position[0] - 1].get('paths', []): # left
-                        tempCount  = 1
+                        tempCount  = 0
+                        while True:
+                            if position[1] - tempCount - 1> 0 and self.canvas.matrix[position[1] - tempCount - 1][position[0]]['base'] != 0:
+                                tempCount += 1
+                            else:
+                                pathWidth += tempCount
+                                break
+                    elif position[0] < 119 and path not in self.canvas.matrix[position[1]][position[0] + 1].get('paths', []) and position[0] > 0 and path not in self.canvas.matrix[position[1]][position[0] - 1].get('paths', []): # path vertical
+                        tempCount  = 0
+                        while True:
+                            if position[0] + tempCount + 1 < 119 and self.canvas.matrix[position[1]][position[0] + tempCount + 1]['base'] != 0:
+                                tempCount += 1
+                            else:
+                                pathWidth += tempCount
+                                break
+                        tempCount  = 0
+                        while True:
+                            if position[0] - tempCount - 1 > 0 and self.canvas.matrix[position[1]][position[0] - tempCount - 1]['base'] != 0:
+                                tempCount += 1
+                            else:
+                                pathWidth += tempCount
+                                break
+                    
 
     def disableAllButtons(self):
         self.master.menu.homeButton.configure(state='disabled')
