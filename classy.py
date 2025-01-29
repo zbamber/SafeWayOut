@@ -663,21 +663,37 @@ class optimisePlanPage(ctk.CTkFrame):
                                 pathWidth += tempCount
                                 break
                     elif position[1] < 79 and path not in self.canvas.matrix[position[1] + 1][position[0]].get('paths', []) and position[0] < 119 and path not in self.canvas.matrix[position[1]][position[0] + 1].get('paths', []):
-                        # Down Left
-                        nearestWall = self.findNearestWall((position[0],position[1]), (-1, -1))
-                        distance  = self.calculateDistance(position, nearestWall)
+                        # Right + Up not path
+                        outsideWall = self.findNearestWall(position, (1, 1))
+                        if self.canvas.matrix[position[1] - 1][position[0] - 1]['base'] == 0:  
+                            insideWall = (position[0] - 1, position[1] - 1)
+                        else:
+                            insideWall = self.findNearestWall((position[0] - 1, position[1] - 1), (-1, -1))
+                        pathWidth  = self.calculateDistance(outsideWall, insideWall)
                     elif position[1] < 79 and path not in self.canvas.matrix[position[1] + 1][position[0]].get('paths', []) and position[0] > 0 and path not in self.canvas.matrix[position[1]][position[0] - 1].get('paths', []):
-                        # Down Right
-                        nearestWall = self.findNearestWall((position[0],position[1]), (1, -1))
-                        distance  = self.calculateDistance(position, nearestWall)
+                        # Left + up not path
+                        outsideWall = self.findNearestWall(position, (-1, 1))
+                        if self.canvas.matrix[position[1] - 1][position[0] + 1]['base'] == 0:
+                            insideWall = (position[0] + 1, position[1] - 1)
+                        else:
+                            insideWall = self.findNearestWall((position[0] + 1, position[1] - 1), (1, -1))
+                        pathWidth  = self.calculateDistance(outsideWall, insideWall)
                     elif position[1] > 0 and path not in self.canvas.matrix[position[1] - 1][position[0]].get('paths', []) and position[0] < 119 and path not in self.canvas.matrix[position[1]][position[0] + 1].get('paths', []):
-                        # Up Left
-                        nearestWall = self.findNearestWall((position[0],position[1]), (-1, 1))
-                        distance  = self.calculateDistance(position, nearestWall)
+                        # Right + Down not path
+                        outsideWall = self.findNearestWall(position, (1, -1))
+                        if self.canvas.matrix[position[1] + 1][position[0] - 1]['base'] == 0:
+                            insideWall = (position[0] - 1, position[1] + 1)
+                        else:
+                            insideWall = self.findNearestWall((position[0] - 1, position[1] + 1), (-1, 1))
+                        pathWidth  = self.calculateDistance(outsideWall, insideWall)
                     elif position[1] > 0 and path not in self.canvas.matrix[position[1] - 1][position[0]].get('paths', []) and position[0] > 0 and path not in self.canvas.matrix[position[1]][position[0] - 1].get('paths', []):
-                        # Up Right
-                        nearestWall = self.findNearestWall((position[0],position[1]), (1, 1))
-                        distance  = self.calculateDistance(position, nearestWall)
+                        # Left + Down not path
+                        outsideWall = self.findNearestWall(position, (-1, -1))
+                        if self.canvas.matrix[position[1] + 1][position[0] + 1]['base'] == 0:
+                            insideWall = (position[0] + 1, position[1] + 1)
+                        else:
+                            insideWall = self.findNearestWall((position[0] + 1, position[1] + 1), (1, 1))
+                        pathWidth  = self.calculateDistance(outsideWall, insideWall)
                     
     def findNearestWall(self, corner, direction):
         nearestWall = (-1,-1)
@@ -691,14 +707,14 @@ class optimisePlanPage(ctk.CTkFrame):
                 elif 0 <= corner[1] + direction[1] * layer <= 79 and 0 <= corner[0] + direction[0] * position <= 119 and self.canvas.matrix[corner[1] + direction[1] * layer][corner[0] + direction[0] * position]['base'] == 0:
                     nearestWall = (corner[0] + direction[0] * position, corner[1] + direction[1] * layer)
                     break
-                position + 1
+                position += 1
             if not (0 <= corner[1] + direction[1] * layer <= 79) and not (0 <= corner[0] + direction[0] * layer <= 119):
                 break
             layer += 1
         return nearestWall
 
     def calculateDistance(self, corner, wall):
-        return math.sqrt(abs(corner[0]-wall[0]) ^ 2 + abs(corner[1]-wall[1]) ^ 2)
+        return math.sqrt(abs(corner[0]-wall[0]) ** 2 + abs(corner[1]-wall[1]) ** 2)
 
     def disableAllButtons(self):
         self.master.menu.homeButton.configure(state='disabled')
