@@ -634,14 +634,14 @@ class optimisePlanPage(ctk.CTkFrame):
                     if position[1] < 79 and path not in self.canvas.matrix[position[1] + 1][position[0]].get('paths', []) and position[1] > 0 and path not in self.canvas.matrix[position[1] - 1][position[0]].get('paths', []): # path is horizontal
                         tempCount  = 0
                         while True:
-                            if position[1] + tempCount + 1< 79 and self.canvas.matrix[position[1] + tempCount + 1][position[0]]['base'] != 0:
+                            if position[1] + tempCount < 79 and self.canvas.matrix[position[1] + tempCount + 1][position[0]]['base'] != 0:
                                 tempCount += 1
                             else:
                                 pathWidth += tempCount
                                 break
                         tempCount  = 0
                         while True:
-                            if position[1] - tempCount - 1> 0 and self.canvas.matrix[position[1] - tempCount - 1][position[0]]['base'] != 0:
+                            if position[1] - tempCount > 0 and self.canvas.matrix[position[1] - tempCount - 1][position[0]]['base'] != 0:
                                 tempCount += 1
                             else:
                                 pathWidth += tempCount
@@ -649,19 +649,47 @@ class optimisePlanPage(ctk.CTkFrame):
                     elif position[0] < 119 and path not in self.canvas.matrix[position[1]][position[0] + 1].get('paths', []) and position[0] > 0 and path not in self.canvas.matrix[position[1]][position[0] - 1].get('paths', []): # path vertical
                         tempCount  = 0
                         while True:
-                            if position[0] + tempCount + 1 < 119 and self.canvas.matrix[position[1]][position[0] + tempCount + 1]['base'] != 0:
+                            if position[0] + tempCount < 119 and self.canvas.matrix[position[1]][position[0] + tempCount + 1]['base'] != 0:
                                 tempCount += 1
                             else:
                                 pathWidth += tempCount
                                 break
                         tempCount  = 0
                         while True:
-                            if position[0] - tempCount - 1 > 0 and self.canvas.matrix[position[1]][position[0] - tempCount - 1]['base'] != 0:
+                            if position[0] - tempCount > 0 and self.canvas.matrix[position[1]][position[0] - tempCount - 1]['base'] != 0:
                                 tempCount += 1
                             else:
                                 pathWidth += tempCount
                                 break
+                    elif position[1] < 79 and path not in self.canvas.matrix[position[1] + 1][position[0]].get('paths', []) and position[0] < 119 and path not in self.canvas.matrix[position[1]][position[0] + 1].get('paths', []):
+                        # Down Left
+                        nearestWall = self.findNearestWall((position[0],position[1]), (-1, -1))
+                    elif position[1] < 79 and path not in self.canvas.matrix[position[1] + 1][position[0]].get('paths', []) and position[0] > 0 and path not in self.canvas.matrix[position[1]][position[0] - 1].get('paths', []):
+                        # Down Right
+                        nearestWall = self.findNearestWall((position[0],position[1]), (1, -1))
+                    elif position[1] > 0 and path not in self.canvas.matrix[position[1] - 1][position[0]].get('paths', []) and position[0] < 119 and path not in self.canvas.matrix[position[1]][position[0] + 1].get('paths', []):
+                        # Up Left
+                        nearestWall = self.findNearestWall((position[0],position[1]), (-1, 1))
+                    elif position[1] > 0 and path not in self.canvas.matrix[position[1] - 1][position[0]].get('paths', []) and position[0] > 0 and path not in self.canvas.matrix[position[1]][position[0] - 1].get('paths', []):
+                        # Up Right
+                        nearestWall = self.findNearestWall((position[0],position[1]), (1, 1))
                     
+    def findNearestWall(self, corner, direction):
+        nearestWall = (-1,-1)
+        layer = 1
+        while nearestWall == (-1,-1):
+            position = 0
+            while position <= layer:
+                if self.canvas.matrix[corner[1] + direction[1] * position][corner[0] + direction[0] * layer]['base'] == 0:
+                    nearestWall = (corner[0] + direction[0] * layer, corner[1] + direction[1] * position)
+                    break
+                elif self.canvas.matrix[corner[1] + direction[1] * layer][corner[0] + direction[0] * position]['base'] == 0:
+                    nearestWall = (corner[0] + direction[0] * position, corner[1] + direction[1] * layer)
+                    break
+                position + 1
+            layer += 1
+
+        return nearestWall
 
     def disableAllButtons(self):
         self.master.menu.homeButton.configure(state='disabled')
