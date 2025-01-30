@@ -469,6 +469,22 @@ class optimisePlanPage(ctk.CTkFrame):
             16:[],
             17:[]
         }
+
+        self.capacityData = {
+            12:20,
+            13:20,
+            14:20,
+            15:20,
+            16:20,
+            17:20
+        }
+
+        WALKING_PACE = 1.4
+        DISTANCE_BETWEEN_PEOPLE = 0.6
+        PEOPLE_PER_METRE = 2
+        self.PEOPLE_PER_SECOND_PER_METRE = WALKING_PACE * PEOPLE_PER_METRE / DISTANCE_BETWEEN_PEOPLE
+        self.acceptableEvacuationTime = 9999
+        
         self.configure(bg_color='white', fg_color='white')
         self.createWidgets()
         self.setButtonImages()
@@ -626,8 +642,7 @@ class optimisePlanPage(ctk.CTkFrame):
         return abs(x1 - x2) + abs(y1 - y2)
 
     def runFlowSimulation(self):
-        minWidth = 3
-        problems = {}
+        problems = []
         for path, data in self.paths.items():
             if self.paths[path]:
                 for position in self.paths[path]:
@@ -665,7 +680,7 @@ class optimisePlanPage(ctk.CTkFrame):
                     elif position[1] < 79 and path not in self.canvas.matrix[position[1] + 1][position[0]].get('paths', []) and position[0] < 119 and path not in self.canvas.matrix[position[1]][position[0] + 1].get('paths', []):
                         # Right + Up not path
                         outsideWall = self.findNearestWall(position, (1, 1))
-                        if self.canvas.matrix[position[1] - 1][position[0] - 1]['base'] == 0:  
+                        if 0 <= position[0] - 1 <= 119 and 0 <= position[1] - 1 <= 79 and self.canvas.matrix[position[1] - 1][position[0] - 1]['base'] == 0:  
                             insideWall = (position[0] - 1, position[1] - 1)
                         else:
                             insideWall = self.findNearestWall((position[0] - 1, position[1] - 1), (-1, -1))
@@ -673,7 +688,7 @@ class optimisePlanPage(ctk.CTkFrame):
                     elif position[1] < 79 and path not in self.canvas.matrix[position[1] + 1][position[0]].get('paths', []) and position[0] > 0 and path not in self.canvas.matrix[position[1]][position[0] - 1].get('paths', []):
                         # Left + up not path
                         outsideWall = self.findNearestWall(position, (-1, 1))
-                        if self.canvas.matrix[position[1] - 1][position[0] + 1]['base'] == 0:
+                        if 0 <= position[0] + 1 <= 119 and 0 <= position[1] - 1 <= 79 and self.canvas.matrix[position[1] - 1][position[0] + 1]['base'] == 0:
                             insideWall = (position[0] + 1, position[1] - 1)
                         else:
                             insideWall = self.findNearestWall((position[0] + 1, position[1] - 1), (1, -1))
@@ -681,7 +696,7 @@ class optimisePlanPage(ctk.CTkFrame):
                     elif position[1] > 0 and path not in self.canvas.matrix[position[1] - 1][position[0]].get('paths', []) and position[0] < 119 and path not in self.canvas.matrix[position[1]][position[0] + 1].get('paths', []):
                         # Right + Down not path
                         outsideWall = self.findNearestWall(position, (1, -1))
-                        if self.canvas.matrix[position[1] + 1][position[0] - 1]['base'] == 0:
+                        if 0 <= position[0] - 1 <= 119 and 0 <= position[1] + 1 <= 79 and self.canvas.matrix[position[1] + 1][position[0] - 1]['base'] == 0:
                             insideWall = (position[0] - 1, position[1] + 1)
                         else:
                             insideWall = self.findNearestWall((position[0] - 1, position[1] + 1), (-1, 1))
@@ -689,12 +704,21 @@ class optimisePlanPage(ctk.CTkFrame):
                     elif position[1] > 0 and path not in self.canvas.matrix[position[1] - 1][position[0]].get('paths', []) and position[0] > 0 and path not in self.canvas.matrix[position[1]][position[0] - 1].get('paths', []):
                         # Left + Down not path
                         outsideWall = self.findNearestWall(position, (-1, -1))
-                        if self.canvas.matrix[position[1] + 1][position[0] + 1]['base'] == 0:
+                        if 0 <= position[0] + 1 <= 119 and 0 <= position[1] + 1 <= 79 and self.canvas.matrix[position[1] + 1][position[0] + 1]['base'] == 0:
                             insideWall = (position[0] + 1, position[1] + 1)
                         else:
                             insideWall = self.findNearestWall((position[0] + 1, position[1] + 1), (1, 1))
                         pathWidth  = self.calculateDistance(outsideWall, insideWall)
+                    people = 0
+
+                    for group in self.canvas.matrix[position[1]][position[0]]['paths']:
+                        people += self.capacityData[group]
+                    desiredFlow = people / self.acceptableEvacuationTime
+                    minWidth = desiredFlow / self.PEOPLE_PER_SECOND_PER_METRE
                     
+                    if pathWidth < minWidth:
+                        problems.append(position)
+
     def findNearestWall(self, corner, direction):
         nearestWall = (-1,-1)
         layer = 1
