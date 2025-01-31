@@ -197,7 +197,10 @@ class inputDataPage(ctk.CTkFrame):
     def __init__(self,parent):
         super().__init__(parent)
         self.nodes = {2:True,3:True,4:True,5:True,6:True,7:True}
+        self.drawingLine = False
+        self.lineEnd = (-1,-1)
         self.currentTool = 0
+        self.tempPixels = []
         self.previousActions = []
         self.redoActions = []
         self.dragIndex = -1
@@ -315,25 +318,59 @@ class inputDataPage(ctk.CTkFrame):
         self.eraserButton.grid_configure(pady=4)
         self.lineButton.grid_configure(pady=4)
         self.bullseyeButton.grid_configure(pady=4)
+        self.mapCanvas.bind('<Button>', lambda event: self.handleDrawing(event=event, drag=False))
+        self.mapCanvas.bind('<B1-Motion>', lambda event: self.handleDrawing(event=event, drag=True))
+        self.mapCanvas.unbind('<Motion>')
 
     def handlePencilButtonClick(self):
         self.deselectCurrentButton()
         self.pencilButton.configure(text_color='black', fg_color='white', image=self.blackPencil, border_width=4)
         self.pencilButton.grid_configure(pady=2)
         self.currentTool = 0
+        self.mapCanvas.bind('<Button>', lambda event: self.handleDrawing(event=event, drag=False))
+        self.mapCanvas.bind('<B1-Motion>', lambda event: self.handleDrawing(event=event, drag=True))
+        self.mapCanvas.unbind('<Motion>')
 
     def handleEraserButtonClick(self):
         self.deselectCurrentButton()
         self.eraserButton.configure(text_color='white', fg_color='black', image=self.blackEraser, border_width=4)
         self.eraserButton.grid_configure(pady=2)
         self.currentTool = 1
+        self.mapCanvas.bind('<Button>', lambda event: self.handleDrawing(event=event, drag=False))
+        self.mapCanvas.bind('<B1-Motion>', lambda event: self.handleDrawing(event=event, drag=True))
+        self.mapCanvas.unbind('<Motion>')
 
     def handleLineButtonClick(self):
         self.deselectCurrentButton()
         self.lineButton.configure(text_color='white', fg_color='black', image=self.blackLine, border_width=4)
         self.lineButton.grid_configure(pady=2)
-        for action in self.redoActions:
-            print(f'x: {action.x}, y: {action.y}, prevColour: {action.prevColour}, dragIndex:{action.dragIndex}')
+        self.mapCanvas.unbind('<B1-Motion>')
+        self.mapCanvas.bind('<Motion>', lambda event: self.handleLineDrawing(event))
+        self.mapCanvas.bind('<Button>', lambda event: self.handleLineClick(event))
+
+    def handleLineClick(self, event):
+        x = event.x // self.mapCanvas.pixelSize
+        y = event.y // self.mapCanvas.pixelSize
+        if self.drawingLine:
+            self.lineEnd = (x,y)
+            self.drawingLine = False
+        else:
+            self.lineStart = (x,y)
+            self.drawingLine = True
+
+    def handleLineDrawing(self, event):
+        x = event.x // self.mapCanvas.pixelSize
+        y = event.y // self.mapCanvas.pixelSize
+        if self.drawingLine:
+            if self.tempPixels:
+                self.deleteTemporarySquares(self.tempPixels)
+            self.tempPixels = self.drawLine(self.lineStart, self.lineEnd, False)
+        elif self.lineEnd != (-1,-1):
+            self.drawLine((x,y), self.lineEnd, True)
+
+    def deleteTemporarySquares(self, squareIDs):
+        for squareID in squareIDs:
+            self.mapCanvas.delete(squareID)
 
     def handleBullseyeButtonClick(self):
         self.deselectCurrentButton()
@@ -343,6 +380,9 @@ class inputDataPage(ctk.CTkFrame):
             if available == True:
                 self.currentTool = node
                 break
+        self.mapCanvas.bind('<Button>', lambda event: self.handleDrawing(event=event, drag=False))
+        self.mapCanvas.bind('<B1-Motion>', lambda event: self.handleDrawing(event=event, drag=True))
+        self.mapCanvas.unbind('<Motion>')
 
     def handleUndoButtonClick(self):
         self.deselectCurrentButton()
@@ -423,6 +463,7 @@ class inputDataPage(ctk.CTkFrame):
             json.dump(self.mapCanvas.matrix, file, indent=None)
 
     def handleOpenFileButtonClick(self):
+        self.deselectCurrentButton()
         self.filePath = filedialog.askopenfilename(initialdir='/temp', title='Choose File', filetypes=[('json Files', '*.json')])
         if self.master.dataAdded.get() == True:
             self.overwriteWarning.place(x = 300, y = 250)
@@ -454,6 +495,67 @@ class inputDataPage(ctk.CTkFrame):
         self.upperFrame.pack(fill='both', expand=True)
         self.openFile.pack(fill='y', expand=True, pady=(0,10))
 
+    def drawLine(self, start, end, lineSubmitted):
+        tempPixels = []
+        if abs(end[0] - start[0]) > abs(end[1] - start[1]):
+            tempPixels = self.drawHorizontalLine(start, end, lineSubmitted)
+        else:
+            tempPixles = self.drawVerticalLine(start, end, lineSubmitted)
+        return tempPixels
+    
+    def drawHorizontalLine(self, start, end, lineSubmitted):
+        tempPixels = []
+        if start[0] > end[0]:
+            start[0] , end[0] = end[0] , start[0]
+            start[1] , end[1] = end[1] , start[1]
+        
+        dx = end[0] - start[0]
+        dy = end[1] - start[1]
+
+        direction = -1 if dy < 0 else 1
+        dy *= direction
+
+        if dx != 0:
+            y = start[1]
+            p = 2 * dy - dx
+            for i in range(dx + 1):
+                pixelID = self.canvas.creation(start[0] + i, y, 1, not lineSubmitted)
+                if not lineSubmitted:
+                    tempPixels.append(pixelID)
+                if p >= 0:
+                    y += direction
+                    p = p - 2 * dx
+                p = p + 2 * dy
+        
+        return tempPixels
+
+
+    def drawVerticalLine(self, start, end, lineSubmitted):
+        tempPixels = []
+        if start[1] > end[1]:
+            start[0] , end[0] = end[0] , start[0]
+            start[1] , end[1] = end[1] , start[1]
+        
+        dx = end[0] - start[0]
+        dy = end[1] - start[1]
+
+        direction = -1 if dx < 0 else 1
+        dx *= direction
+
+        if dy != 0:
+            x = start[0]
+            p = 2 * dx - dy
+            for i in range(dy + 1):
+                pixelID = self.canvas.creation(x, start[1] + i, 1, not lineSubmitted)
+                if not lineSubmitted:
+                    tempPixels.append(pixelID)
+                if p >= 0:
+                    x += direction
+                    p = p - 2 * dy
+                p = p + 2 * dx
+        
+        return tempPixels
+    
 class optimisePlanPage(ctk.CTkFrame):
     def __init__(self,parent):
         super().__init__(parent)
@@ -746,7 +848,7 @@ class optimisePlanPage(ctk.CTkFrame):
                     if pathWidth < minWidth:
                         problems.append(position)
         self.deleteTemporarySquares(tempSquareIDs)
-        
+
     def findNearestWall(self, corner, direction):
         nearestWall = (-1,-1)
         layer = 1
@@ -1083,6 +1185,11 @@ class overwriteWarning(ctk.CTkFrame):
     def handlecancelButtonClick(self):
         self.cancelButton.configure(text_color='black', fg_color='white')
         self.place_forget()
+
+class capacityDataInput(ctk.CTkFrame):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.configure(height=200, width=400, corner_radius=15, border_color='black', border_width=5, bg_color='white', fg_color='white')
 
  
 if __name__ == '__main__':
