@@ -623,7 +623,7 @@ class optimisePlanPage(ctk.CTkFrame):
 
             self.after(1, run_algorithm_step)
         run_algorithm_step()
-        return True    
+        return True
 
     def deleteTemporarySquares(self, squareIDs):
         for squareID in squareIDs:
@@ -643,6 +643,7 @@ class optimisePlanPage(ctk.CTkFrame):
 
     def runFlowSimulation(self):
         problems = []
+        tempSquareIDs = []
         for path, data in self.paths.items():
             if self.paths[path]:
                 for position in self.paths[path]:
@@ -652,6 +653,8 @@ class optimisePlanPage(ctk.CTkFrame):
                         while True:
                             if position[1] + tempCount < 79 and self.canvas.matrix[position[1] + tempCount + 1][position[0]]['base'] != 0:
                                 tempCount += 1
+                                squareID = self.canvas.creation(position[0], position[1] + tempCount + 1, 9, True)
+                                tempSquareIDs.append(squareID)
                             else:
                                 pathWidth += tempCount
                                 break
@@ -659,6 +662,8 @@ class optimisePlanPage(ctk.CTkFrame):
                         while True:
                             if position[1] - tempCount > 0 and self.canvas.matrix[position[1] - tempCount - 1][position[0]]['base'] != 0:
                                 tempCount += 1
+                                squareID = self.canvas.creation(position[0], position[1] - tempCount - 1, 9, True)
+                                tempSquareIDs.append(squareID)
                             else:
                                 pathWidth += tempCount
                                 break
@@ -667,6 +672,8 @@ class optimisePlanPage(ctk.CTkFrame):
                         while True:
                             if position[0] + tempCount < 119 and self.canvas.matrix[position[1]][position[0] + tempCount + 1]['base'] != 0:
                                 tempCount += 1
+                                squareID = self.canvas.creation(position[0] + tempCount + 1, position[1], 9, True)
+                                tempSquareIDs.append(squareID)
                             else:
                                 pathWidth += tempCount
                                 break
@@ -674,51 +681,72 @@ class optimisePlanPage(ctk.CTkFrame):
                         while True:
                             if position[0] - tempCount > 0 and self.canvas.matrix[position[1]][position[0] - tempCount - 1]['base'] != 0:
                                 tempCount += 1
+                                squareID = self.canvas.creation(position[0] + tempCount - 1, position[1], 9, True)
+                                tempSquareIDs.append(squareID)
                             else:
                                 pathWidth += tempCount
                                 break
                     elif position[1] < 79 and path not in self.canvas.matrix[position[1] + 1][position[0]].get('paths', []) and position[0] < 119 and path not in self.canvas.matrix[position[1]][position[0] + 1].get('paths', []):
                         # Right + Up not path
                         outsideWall = self.findNearestWall(position, (1, 1))
-                        if 0 <= position[0] - 1 <= 119 and 0 <= position[1] - 1 <= 79 and self.canvas.matrix[position[1] - 1][position[0] - 1]['base'] == 0:  
-                            insideWall = (position[0] - 1, position[1] - 1)
+                        if 0 <= position[0] - 1 <= 119 and 0 <= position[1] - 1 <= 79:
+                            if self.canvas.matrix[position[1] - 1][position[0] - 1]['base'] == 0:
+                                insideWall = (position[0] - 1, position[1] - 1)
+                            else:
+                                insideWall = self.findNearestWall((position[0] - 1, position[1] - 1), (-1, -1))
+                            pathWidth  = self.calculateDistance(outsideWall, insideWall)
+                            tempSquareIDs += self.drawLine(insideWall, outsideWall)
                         else:
-                            insideWall = self.findNearestWall((position[0] - 1, position[1] - 1), (-1, -1))
-                        pathWidth  = self.calculateDistance(outsideWall, insideWall)
+                            insideWall = (position[0] - 1, position[1] - 1)
                     elif position[1] < 79 and path not in self.canvas.matrix[position[1] + 1][position[0]].get('paths', []) and position[0] > 0 and path not in self.canvas.matrix[position[1]][position[0] - 1].get('paths', []):
                         # Left + up not path
                         outsideWall = self.findNearestWall(position, (-1, 1))
-                        if 0 <= position[0] + 1 <= 119 and 0 <= position[1] - 1 <= 79 and self.canvas.matrix[position[1] - 1][position[0] + 1]['base'] == 0:
-                            insideWall = (position[0] + 1, position[1] - 1)
+                        if 0 <= position[0] + 1 <= 119 and 0 <= position[1] - 1 <= 79:
+                            if self.canvas.matrix[position[1] - 1][position[0] + 1]['base'] == 0:
+                                insideWall = (position[0] + 1, position[1] - 1)
+                            else:
+                                insideWall = self.findNearestWall((position[0] + 1, position[1] - 1), (1, -1))
+                            pathWidth  = self.calculateDistance(outsideWall, insideWall)
+                            tempSquareIDs += self.drawLine(insideWall, outsideWall)
                         else:
-                            insideWall = self.findNearestWall((position[0] + 1, position[1] - 1), (1, -1))
-                        pathWidth  = self.calculateDistance(outsideWall, insideWall)
+                            insideWall = (position[0] + 1, position[1] - 1)
                     elif position[1] > 0 and path not in self.canvas.matrix[position[1] - 1][position[0]].get('paths', []) and position[0] < 119 and path not in self.canvas.matrix[position[1]][position[0] + 1].get('paths', []):
                         # Right + Down not path
                         outsideWall = self.findNearestWall(position, (1, -1))
-                        if 0 <= position[0] - 1 <= 119 and 0 <= position[1] + 1 <= 79 and self.canvas.matrix[position[1] + 1][position[0] - 1]['base'] == 0:
-                            insideWall = (position[0] - 1, position[1] + 1)
+                        if 0 <= position[0] - 1 <= 119 and 0 <= position[1] + 1 <= 79:
+                            if self.canvas.matrix[position[1] + 1][position[0] - 1]['base'] == 0:
+                                insideWall = (position[0] - 1, position[1] + 1)
+                            else:
+                                insideWall = self.findNearestWall((position[0] - 1, position[1] + 1), (-1, 1))
+                            pathWidth  = self.calculateDistance(outsideWall, insideWall)
+                            tempSquareIDs += self.drawLine(insideWall, outsideWall)
                         else:
-                            insideWall = self.findNearestWall((position[0] - 1, position[1] + 1), (-1, 1))
-                        pathWidth  = self.calculateDistance(outsideWall, insideWall)
+                            insideWall = (position[0] - 1, position[1] + 1)
                     elif position[1] > 0 and path not in self.canvas.matrix[position[1] - 1][position[0]].get('paths', []) and position[0] > 0 and path not in self.canvas.matrix[position[1]][position[0] - 1].get('paths', []):
                         # Left + Down not path
                         outsideWall = self.findNearestWall(position, (-1, -1))
-                        if 0 <= position[0] + 1 <= 119 and 0 <= position[1] + 1 <= 79 and self.canvas.matrix[position[1] + 1][position[0] + 1]['base'] == 0:
-                            insideWall = (position[0] + 1, position[1] + 1)
+                        if 0 <= position[0] + 1 <= 119 and 0 <= position[1] + 1 <= 79:
+                            if self.canvas.matrix[position[1] + 1][position[0] + 1]['base'] == 0:
+                                insideWall = (position[0] + 1, position[1] + 1)
+                            else:
+                                insideWall = self.findNearestWall((position[0] + 1, position[1] + 1), (1, 1))
+                            pathWidth  = self.calculateDistance(outsideWall, insideWall)
+                            tempSquareIDs += self.drawLine(insideWall, outsideWall)
                         else:
-                            insideWall = self.findNearestWall((position[0] + 1, position[1] + 1), (1, 1))
-                        pathWidth  = self.calculateDistance(outsideWall, insideWall)
+                            insideWall = (position[0] + 1, position[1] + 1)
+
                     people = 0
 
                     for group in self.canvas.matrix[position[1]][position[0]]['paths']:
                         people += self.capacityData[group]
+                        
                     desiredFlow = people / self.acceptableEvacuationTime
                     minWidth = desiredFlow / self.PEOPLE_PER_SECOND_PER_METRE
                     
                     if pathWidth < minWidth:
                         problems.append(position)
-
+        self.deleteTemporarySquares(tempSquareIDs)
+        
     def findNearestWall(self, corner, direction):
         nearestWall = (-1,-1)
         layer = 1
@@ -739,6 +767,65 @@ class optimisePlanPage(ctk.CTkFrame):
 
     def calculateDistance(self, corner, wall):
         return math.sqrt(abs(corner[0]-wall[0]) ** 2 + abs(corner[1]-wall[1]) ** 2)
+    
+    def drawLine(self, start, end):
+        tempPixels = []
+        if abs(end[0] - start[0]) > abs(end[1] - start[1]):
+            tempPixels = self.drawHorizontalLine(start, end)
+        else:
+            tempPixles = self.drawVerticalLine(start, end)
+        return tempPixels
+    
+    def drawHorizontalLine(self, start, end):
+        tempPixels = []
+        if start[0] > end[0]:
+            start[0] , end[0] = end[0] , start[0]
+            start[1] , end[1] = end[1] , start[1]
+        
+        dx = end[0] - start[0]
+        dy = end[1] - start[1]
+
+        direction = -1 if dy < 0 else 1
+        dy *= direction
+
+        if dx != 0:
+            y = start[1]
+            p = 2 * dy - dx
+            for i in range(dx + 1):
+                pixelID = self.canvas.creation(start[0] + i, y, 8, True)
+                tempPixels.append(pixelID)
+                if p >= 0:
+                    y += direction
+                    p = p - 2 * dx
+                p = p + 2 * dy
+        
+        return tempPixels
+
+
+    def drawVerticalLine(self, start, end):
+        tempPixels = []
+        if start[1] > end[1]:
+            start[0] , end[0] = end[0] , start[0]
+            start[1] , end[1] = end[1] , start[1]
+        
+        dx = end[0] - start[0]
+        dy = end[1] - start[1]
+
+        direction = -1 if dx < 0 else 1
+        dx *= direction
+
+        if dy != 0:
+            x = start[0]
+            p = 2 * dx - dy
+            for i in range(dy + 1):
+                pixelID = self.canvas.creation(x, start[1] + i, 8, True)
+                tempPixels.append(pixelID)
+                if p >= 0:
+                    x += direction
+                    p = p - 2 * dy
+                p = p + 2 * dx
+        
+        return tempPixels
 
     def disableAllButtons(self):
         self.master.menu.homeButton.configure(state='disabled')
