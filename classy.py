@@ -354,6 +354,15 @@ class inputDataPage(ctk.CTkFrame):
         if self.drawingLine:
             self.lineEnd = (x,y)
             self.drawingLine = False
+            self.dragIndex += 1
+            lineData = self.drawLine(self.lineStart, (x,y), False)
+            for i, point in enumerate(self.previousActions):
+                print(f"Previous Actions {i+1}: (x={point.x}, y={point.y}, prevColour={point.prevColour}, colour={point.colour}, dragIndex={point.dragIndex})")
+            for i, point in enumerate(lineData):
+                print(f"Line Data {i+1}: (x={point.x}, y={point.y}, prevColour={point.prevColour}, colour={point.colour}, dragIndex={point.dragIndex})")
+            self.previousActions += lineData
+            for i, point in enumerate(self.previousActions):
+                print(f"Previous Actions {i+1}: (x={point.x}, y={point.y}, prevColour={point.prevColour}, colour={point.colour}, dragIndex={point.dragIndex})")
         else:
             self.lineStart = (x,y)
             self.drawingLine = True
@@ -362,11 +371,10 @@ class inputDataPage(ctk.CTkFrame):
         x = event.x // self.mapCanvas.pixelSize
         y = event.y // self.mapCanvas.pixelSize
         if self.drawingLine:
-            if self.tempPixels:
-                self.deleteTemporarySquares(self.tempPixels)
-            self.tempPixels = self.drawLine(self.lineStart, self.lineEnd, False)
-        elif self.lineEnd != (-1,-1):
-            self.drawLine((x,y), self.lineEnd, True)
+            for pixel in self.tempPixels:
+                self.mapCanvas.delete(pixel)
+            self.tempPixels = self.drawLine(self.lineStart, (x,y), self.drawingLine)
+
 
     def deleteTemporarySquares(self, squareIDs):
         for squareID in squareIDs:
@@ -496,65 +504,69 @@ class inputDataPage(ctk.CTkFrame):
         self.openFile.pack(fill='y', expand=True, pady=(0,10))
 
     def drawLine(self, start, end, lineSubmitted):
-        tempPixels = []
+        lineData = []
         if abs(end[0] - start[0]) > abs(end[1] - start[1]):
-            tempPixels = self.drawHorizontalLine(start, end, lineSubmitted)
+            lineData = self.drawHorizontalLine(start[0], start[1], end[0], end[1], lineSubmitted)
         else:
-            tempPixles = self.drawVerticalLine(start, end, lineSubmitted)
-        return tempPixels
+            lineData = self.drawVerticalLine(start[0], start[1], end[0], end[1], lineSubmitted)
+        return lineData
     
-    def drawHorizontalLine(self, start, end, lineSubmitted):
-        tempPixels = []
-        if start[0] > end[0]:
-            start[0] , end[0] = end[0] , start[0]
-            start[1] , end[1] = end[1] , start[1]
+    def drawHorizontalLine(self, x0, y0, x1, y1, lineSubmitted):
+        lineData = []
+        if x0 > x1:
+            x0 , x1 = x1 , x0
+            y0 , y1 = y1 , y0
         
-        dx = end[0] - start[0]
-        dy = end[1] - start[1]
+        dx = x1 - x0
+        dy = y1 - y0
 
         direction = -1 if dy < 0 else 1
         dy *= direction
 
         if dx != 0:
-            y = start[1]
+            y = y0
             p = 2 * dy - dx
             for i in range(dx + 1):
-                pixelID = self.canvas.creation(start[0] + i, y, 1, not lineSubmitted)
                 if not lineSubmitted:
-                    tempPixels.append(pixelID)
+                    lineData.append(dataPoint(x0 + i, y, self.mapCanvas.matrix[y][x0 + i]['base'], 0, self.dragIndex))
+                pixelID = self.mapCanvas.creation(x0 + i, y, 0, lineSubmitted)
+                if lineSubmitted:
+                    lineData.append(pixelID)
                 if p >= 0:
                     y += direction
                     p = p - 2 * dx
                 p = p + 2 * dy
-        
-        return tempPixels
+        return lineData
 
 
-    def drawVerticalLine(self, start, end, lineSubmitted):
-        tempPixels = []
-        if start[1] > end[1]:
-            start[0] , end[0] = end[0] , start[0]
-            start[1] , end[1] = end[1] , start[1]
+    def drawVerticalLine(self, x0, y0, x1, y1, lineSubmitted):
+        lineData = []
+        if y0 > y1:
+            x0 , x1 = x1 , x0
+            y0 , y1 = y1 , y0
         
-        dx = end[0] - start[0]
-        dy = end[1] - start[1]
+        dx = x1 - x0
+        dy = y1 - y0
 
         direction = -1 if dx < 0 else 1
         dx *= direction
 
         if dy != 0:
-            x = start[0]
+            x = x0
             p = 2 * dx - dy
             for i in range(dy + 1):
-                pixelID = self.canvas.creation(x, start[1] + i, 1, not lineSubmitted)
                 if not lineSubmitted:
-                    tempPixels.append(pixelID)
+                    lineData.append(dataPoint(x, y0 + i, self.mapCanvas.matrix[y0 + i][x]['base'], 0, self.dragIndex))
+                pixelID = self.mapCanvas.creation(x, y0 + i, 0, lineSubmitted)
+                if lineSubmitted:
+                    lineData.append(pixelID)
+                    
                 if p >= 0:
                     x += direction
                     p = p - 2 * dy
                 p = p + 2 * dx
         
-        return tempPixels
+        return lineData
     
 class optimisePlanPage(ctk.CTkFrame):
     def __init__(self,parent):
@@ -873,28 +885,28 @@ class optimisePlanPage(ctk.CTkFrame):
     def drawLine(self, start, end):
         tempPixels = []
         if abs(end[0] - start[0]) > abs(end[1] - start[1]):
-            tempPixels = self.drawHorizontalLine(start, end)
+            tempPixels = self.drawHorizontalLine(start[0], start[1], end[0], end[1])
         else:
-            tempPixles = self.drawVerticalLine(start, end)
+            tempPixles = self.drawVerticalLine(start[0], start[1], end[0], end[1])
         return tempPixels
     
-    def drawHorizontalLine(self, start, end):
+    def drawHorizontalLine(self, x0, y0, x1, y1):
         tempPixels = []
-        if start[0] > end[0]:
-            start[0] , end[0] = end[0] , start[0]
-            start[1] , end[1] = end[1] , start[1]
+        if x0 > x1:
+            x0 , x1 = x1 , x0
+            y0 , y1 = y1 , y0
         
-        dx = end[0] - start[0]
-        dy = end[1] - start[1]
+        dx = x1 - x0
+        dy = y1 - y0
 
         direction = -1 if dy < 0 else 1
         dy *= direction
 
         if dx != 0:
-            y = start[1]
+            y = y0
             p = 2 * dy - dx
             for i in range(dx + 1):
-                pixelID = self.canvas.creation(start[0] + i, y, 8, True)
+                pixelID = self.canvas.creation(x0 + i, y, 8, True)
                 tempPixels.append(pixelID)
                 if p >= 0:
                     y += direction
@@ -904,23 +916,23 @@ class optimisePlanPage(ctk.CTkFrame):
         return tempPixels
 
 
-    def drawVerticalLine(self, start, end):
+    def drawVerticalLine(self, x0, y0, x1, y1):
         tempPixels = []
-        if start[1] > end[1]:
-            start[0] , end[0] = end[0] , start[0]
-            start[1] , end[1] = end[1] , start[1]
+        if y0 > y1:
+            x0 , x1 = x1 , x0
+            y0 , y1 = y1 , y0
         
-        dx = end[0] - start[0]
-        dy = end[1] - start[1]
+        dx = x1 - x0
+        dy = y1 - y0
 
         direction = -1 if dx < 0 else 1
         dx *= direction
 
         if dy != 0:
-            x = start[0]
+            x = x0
             p = 2 * dx - dy
             for i in range(dy + 1):
-                pixelID = self.canvas.creation(x, start[1] + i, 8, True)
+                pixelID = self.canvas.creation(x, y0 + i, 8, True)
                 tempPixels.append(pixelID)
                 if p >= 0:
                     x += direction
