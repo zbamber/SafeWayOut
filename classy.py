@@ -205,6 +205,7 @@ class inputDataPage(ctk.CTkFrame):
         self.redoActions = []
         self.dragIndex = -1
         self.planInserted = False
+        self.capacityInputOpen = False
         self.previousActions.append(dataPoint(-1,-1,-1,-1,-1))
         self.redoActions.append(dataPoint(-1,-1,-1,-1,-1))
         self.upload = CTkImage(light_image=Image.open('assets/upload.png'))
@@ -215,12 +216,16 @@ class inputDataPage(ctk.CTkFrame):
         self.blackBullseye = CTkImage(light_image=Image.open('assets/blackBullseye.png'), size=(16,16))
         self.blackUndo = CTkImage(light_image=Image.open('assets/blackUndo.png'), size=(16,16))
         self.blackRedo = CTkImage(light_image=Image.open('assets/blackRedo.png'), size=(16,16))
+        self.blackDiskette = CTkImage(light_image=Image.open('assets/blackDiskette.png'), size=(32,32))
+        self.blackImport = CTkImage(light_image=Image.open('assets/blackImport.png'), size=(32,32))
         self.whitePencil = CTkImage(light_image=Image.open('assets/whitePencil.png'), size=(16,16))
         self.whiteEraser = CTkImage(light_image=Image.open('assets/whiteEraser.png'), size=(16,16))
         self.whiteLine = CTkImage(light_image=Image.open('assets/whiteLine.png'), size=(16,16))
         self.whiteBullseye = CTkImage(light_image=Image.open('assets/whiteBullseye.png'), size=(16,16))
         self.whiteUndo = CTkImage(light_image=Image.open('assets/whiteUndo.png'), size=(16,16))
         self.whiteRedo = CTkImage(light_image=Image.open('assets/whiteRedo.png'), size=(16,16))
+        self.whiteDiskette = CTkImage(light_image=Image.open('assets/whiteDiskette.png'), size=(32,32))
+        self.whiteImport = CTkImage(light_image=Image.open('assets/whiteImport.png'), size=(32,32))
         self.configure(bg_color='white', fg_color='white')
         self.createWidgets()
         self.placeWidgets()
@@ -238,9 +243,9 @@ class inputDataPage(ctk.CTkFrame):
 
         self.upperFrame = ctk.CTkFrame(self, bg_color='white', fg_color='white')
         self.toolContainer = ctk.CTkFrame(self.upperFrame, bg_color='white', fg_color='white')
-        self.toolContainer.rowconfigure((0,1,2,3,4,5), weight=1)
-        self.toolContainer.rowconfigure(6, weight=3)
-        self.toolContainer.rowconfigure((7,8), weight=1)
+        self.toolContainer.rowconfigure((0,1,2,3,4,5,6), weight=1)
+        self.toolContainer.rowconfigure(7, weight=3)
+        self.toolContainer.rowconfigure((8,9), weight=1)
         self.toolContainer.columnconfigure((0,1), weight=1)
         self.brushLabel = ctk.CTkLabel(self.toolContainer, image=self.brush, text='')
         self.pencilButton = ctk.CTkButton(self.toolContainer, image=self.blackPencil, text='', **ButtonStyling, command=lambda: self.after(100, self.handlePencilButtonClick))
@@ -251,13 +256,14 @@ class inputDataPage(ctk.CTkFrame):
         self.redoButton = ctk.CTkButton(self.toolContainer, image=self.blackRedo, text='', **ButtonStyling, command=lambda: self.after(100, self.handleRedoButtonClick))
         self.clearCanvasButton = ctk.CTkButton(self.toolContainer, text='Clear', **ButtonStyling, command=lambda: self.after(100, self.handleClearButtonClick))
         self.doneButton = ctk.CTkButton(self.toolContainer, text='Done', **ButtonStyling, command=lambda: self.after(100, self.handleDoneButtonClick))
-        self.saveButton = ctk.CTkButton(self.toolContainer,text='Save', **ButtonStyling, command=lambda: self.after(100, self.handleSaveButtonClick))
+        self.openFileButton = ctk.CTkButton(self.toolContainer, image=self.blackImport, text='', **ButtonStyling, command=lambda: self.after(100, self.handleOpenFileButtonClick))
+        self.saveButton = ctk.CTkButton(self.toolContainer, image=self.blackDiskette, text='', **ButtonStyling, command=lambda: self.after(100, self.handleSaveButtonClick))
         self.padder = ctk.CTkFrame(self.toolContainer, bg_color='white', fg_color='white')
         self.mapContainer = ctk.CTkFrame(self.upperFrame, corner_radius=15, border_color='black', border_width=5, bg_color='white', fg_color='white')
         self.mapCanvas = Canvas(parent=self.mapContainer, width=960, height=640)
+        self.capacityButton = ctk.CTkButton(self, text='Input Capacity Data', border_width=2, border_color='black', text_color='black', fg_color='white', corner_radius=10, font=('Excalifont',20), width=300, command=lambda: self.after(100, self.handleCapacityButtonClick))
         self.mapCanvas.bind('<Button>', lambda event: self.handleDrawing(event=event, drag=False))
         self.mapCanvas.bind('<B1-Motion>', lambda event: self.handleDrawing(event=event, drag=True))
-        self.openFile = ctk.CTkButton(self, text='Open a file', font=('Excalifont',20), text_color='black', fg_color='white', hover_color='white', command=self.handleOpenFileButtonClick, image=self.upload)
         self.pencilButton.bind('<Enter>', lambda event: self.pencilButton.configure(text_color='white', fg_color='black', image=self.whitePencil))
         self.pencilButton.bind('<Leave>', lambda event: self.pencilButton.configure(text_color='black', fg_color='white', image=self.blackPencil))
         self.eraserButton.bind('<Enter>', lambda event: self.eraserButton.configure(text_color='white', fg_color='black', image=self.whiteEraser))
@@ -270,10 +276,46 @@ class inputDataPage(ctk.CTkFrame):
         self.undoButton.bind('<Leave>', lambda event: self.undoButton.configure(text_color='black', fg_color='white', image=self.blackUndo))
         self.redoButton.bind('<Enter>', lambda event: self.redoButton.configure(text_color='white', fg_color='black', image=self.whiteRedo))
         self.redoButton.bind('<Leave>', lambda event: self.redoButton.configure(text_color='black', fg_color='white', image=self.blackRedo))
+        self.saveButton.bind('<Enter>', lambda event: self.saveButton.configure(text_color='white', fg_color='black', image=self.whiteDiskette))
+        self.saveButton.bind('<Leave>', lambda event: self.saveButton.configure(text_color='black', fg_color='white', image=self.blackDiskette))
+        self.openFileButton.bind('<Enter>', lambda event: self.openFileButton.configure(text_color='white', fg_color='black', image=self.whiteImport))
+        self.openFileButton.bind('<Leave>', lambda event: self.openFileButton.configure(text_color='black', fg_color='white', image=self.blackImport))
         self.configureTextButtons(self.clearCanvasButton)
         self.configureTextButtons(self.doneButton)
-        self.configureTextButtons(self.saveButton)
+        self.configureTextButtons(self.capacityButton)
         self.overwriteWarning = overwriteWarning(self)
+        self.capacityDataPage = capacityDataInput(self)
+
+    def placeWidgets(self):
+        self.mapContainer.pack(pady=(10,0), side='left')
+        self.toolContainer.pack(side='left', fill='both', expand=True, pady=(10,0))
+        self.brushLabel.grid(row=0, column=0, rowspan=2, columnspan=2, sticky='new', pady=(5,0))
+        self.pencilButton.grid(row=2, column=0, sticky='nsew', padx=2, pady=4)
+        self.eraserButton.grid(row=2, column=1, sticky='nsew', padx=2, pady=4)
+        self.lineButton.grid(row=3, column=0, sticky='nsew', padx=2, pady=4)
+        self.bullseyeButton.grid(row=3, column=1, sticky='nsew', padx=2, pady=4)
+        self.undoButton.grid(row=4, column=0, sticky='nsew', padx=2, pady=4)
+        self.redoButton.grid(row=4, column=1, sticky='nsew', padx=2, pady=4)
+        self.clearCanvasButton.grid(row=5, column=0, sticky='nsew', columnspan=2, padx=2, pady=4)
+        self.doneButton.grid(row=6, column=0, sticky='nsew', columnspan=2, padx=2, pady=4)
+        self.padder.grid(row=7, column=0, columnspan=2)
+        self.openFileButton.grid(row=8, column=0, sticky='nsew', columnspan=2, padx=2, pady=4)
+        self.saveButton.grid(row=9, column=0, sticky='nsew', columnspan=2, padx=2, pady=4)
+        self.mapCanvas.pack(pady=10, padx=10)
+        self.upperFrame.pack(fill='both', expand=True)
+        self.capacityButton.pack(pady=10)
+
+    def handleCapacityButtonClick(self):
+        self.deselectCurrentButton()
+        self.capacityButton.configure(text_color='white', fg_color='black')
+        if self.capacityInputOpen:
+            self.capacityDataPage.place_forget()
+            self.capacityButton.configure(text='Input Capacity Data')
+            self.capacityInputOpen = False
+        else:
+            self.capacityDataPage.place(x = 200, y = 350)
+            self.capacityButton.configure(text='Done')
+            self.capacityInputOpen = True
 
     def handleDrawing(self, event, drag):
         x = event.x // self.mapCanvas.pixelSize
@@ -356,13 +398,7 @@ class inputDataPage(ctk.CTkFrame):
             self.drawingLine = False
             self.dragIndex += 1
             lineData = self.drawLine(self.lineStart, (x,y), False)
-            for i, point in enumerate(self.previousActions):
-                print(f"Previous Actions {i+1}: (x={point.x}, y={point.y}, prevColour={point.prevColour}, colour={point.colour}, dragIndex={point.dragIndex})")
-            for i, point in enumerate(lineData):
-                print(f"Line Data {i+1}: (x={point.x}, y={point.y}, prevColour={point.prevColour}, colour={point.colour}, dragIndex={point.dragIndex})")
             self.previousActions += lineData
-            for i, point in enumerate(self.previousActions):
-                print(f"Previous Actions {i+1}: (x={point.x}, y={point.y}, prevColour={point.prevColour}, colour={point.colour}, dragIndex={point.dragIndex})")
         else:
             self.lineStart = (x,y)
             self.drawingLine = True
@@ -374,7 +410,6 @@ class inputDataPage(ctk.CTkFrame):
             for pixel in self.tempPixels:
                 self.mapCanvas.delete(pixel)
             self.tempPixels = self.drawLine(self.lineStart, (x,y), self.drawingLine)
-
 
     def deleteTemporarySquares(self, squareIDs):
         for squareID in squareIDs:
@@ -472,6 +507,7 @@ class inputDataPage(ctk.CTkFrame):
 
     def handleOpenFileButtonClick(self):
         self.deselectCurrentButton()
+        self.openFileButton.configure(text_color='white', fg_color='black')
         self.filePath = filedialog.askopenfilename(initialdir='/temp', title='Choose File', filetypes=[('json Files', '*.json')])
         if self.master.dataAdded.get() == True:
             self.overwriteWarning.place(x = 300, y = 250)
@@ -484,24 +520,6 @@ class inputDataPage(ctk.CTkFrame):
             self.master.dataAdded.set(True)
             self.master.matrix = copy.deepcopy(self.mapCanvas.matrix)
             self.mapCanvas.display()
-
-    def placeWidgets(self):
-        self.mapContainer.pack(pady=(10,0), side='left')
-        self.toolContainer.pack(side='left', fill='both', expand=True, pady=(10,0))
-        self.brushLabel.grid(row=0, column=0, rowspan=2, columnspan=2, sticky='new', pady=(5,0))
-        self.pencilButton.grid(row=2, column=0, sticky='nsew', padx=2, pady=4)
-        self.eraserButton.grid(row=2, column=1, sticky='nsew', padx=2, pady=4)
-        self.lineButton.grid(row=3, column=0, sticky='nsew', padx=2, pady=4)
-        self.bullseyeButton.grid(row=3, column=1, sticky='nsew', padx=2, pady=4)
-        self.undoButton.grid(row=4, column=0, sticky='nsew', padx=2, pady=4)
-        self.redoButton.grid(row=4, column=1, sticky='nsew', padx=2, pady=4)
-        self.clearCanvasButton.grid(row=5, column=0, sticky='nsew', columnspan=2, padx=2, pady=4)
-        self.padder.grid(row=6, column=0, columnspan=2, sticky='nsew')
-        self.doneButton.grid(row=7, column=0, sticky='nsew', columnspan=2, padx=2, pady=4)
-        self.saveButton.grid(row=8, column=0, sticky='nsew', columnspan=2, padx=2, pady=4)
-        self.mapCanvas.pack(pady=10, padx=10)
-        self.upperFrame.pack(fill='both', expand=True)
-        self.openFile.pack(fill='y', expand=True, pady=(0,10))
 
     def drawLine(self, start, end, lineSubmitted):
         lineData = []
@@ -537,7 +555,6 @@ class inputDataPage(ctk.CTkFrame):
                     p = p - 2 * dx
                 p = p + 2 * dy
         return lineData
-
 
     def drawVerticalLine(self, x0, y0, x1, y1, lineSubmitted):
         lineData = []
@@ -1073,6 +1090,7 @@ class optimisePlanPage(ctk.CTkFrame):
                     self.astar(node, self.evacPoint)
         self.enableAllButtons()
         app.simulationRan = True
+
 class Canvas(ctk.CTkCanvas):
     def __init__(self, parent, height, width):
         super().__init__(parent)
@@ -1202,6 +1220,47 @@ class capacityDataInput(ctk.CTkFrame):
     def __init__(self, parent):
         super().__init__(parent)
         self.configure(height=200, width=400, corner_radius=15, border_color='black', border_width=5, bg_color='white', fg_color='white')
+        self.createWidgets()
+        self.placeWidgets()
+
+    def createWidgets(self):
+        self.red = CTkImage(light_image=Image.open('assets/red.png'))
+        self.blue = CTkImage(light_image=Image.open('assets/blue.png'))
+        self.green = CTkImage(light_image=Image.open('assets/green.png'))
+        self.orange = CTkImage(light_image=Image.open('assets/orange.png'))
+        self.pink = CTkImage(light_image=Image.open('assets/pink.png'))
+        self.yellow = CTkImage(light_image=Image.open('assets/yellow.png'))
+
+        self.titleLabel = ctk.CTkLabel(self, text='Input Capacity Data', text_color='black', font=('Excalifont',25))
+        self.scrollFrame = ctk.CTkScrollableFrame(self, bg_color='white', fg_color='white')
+
+        self.redEntry = nodeWidget(self.scrollFrame, image=self.red)
+        self.blueEntry = nodeWidget(self.scrollFrame, image=self.blue)
+        self.greenEntry = nodeWidget(self.scrollFrame, image=self.green)
+        self.orangeEntry = nodeWidget(self.scrollFrame, image=self.orange)
+        self.pinkEntry = nodeWidget(self.scrollFrame, image=self.pink)
+        self.yellowEntry = nodeWidget(self.scrollFrame, image=self.yellow)
+
+    def placeWidgets(self):
+        self.titleLabel.pack(padx=200, pady=10)
+        self.scrollFrame.pack(padx=10, pady=(0,10), expand=True, fill='both')
+
+class nodeWidget(ctk.CTkFrame):
+    def __init__(self, parent, image):
+        super().__init__(parent)
+        self.configure(corner_radius=15, border_color='black', border_width=5, bg_color='white', fg_color='white')
+        self.createWidgets(image)
+        self.placeWidgets()
+
+    def createWidgets(self, image):
+        self.image = ctk.CTkLabel(self, image=image, text='')
+        self.label = ctk.CTkLabel(self, text='Input Capacity', text_color='black', font=('Excalifont',20))
+        self.entryField = ctk.CTkEntry(self, fg_color='white', text_color='black', font=('Excalifont',15), justify='center')
+    
+    def placeWidgets(self):
+        self.image.pack(padx=(10,0), pady=10, side='left')
+        self.label.pack(padx=10, pady=(10,0))
+        self.entryField.pack(pady=10, padx=(10,20))
 
  
 if __name__ == '__main__':
