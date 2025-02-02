@@ -127,7 +127,7 @@ class homePage(ctk.CTkFrame):
         else:
             self.noDataText = self.mapCanvas.create_text(300,200, text='No Data', font=('Excalifont',20))
         self.placeNodesCheckBox.deselect()
-        for node, coord in app.nodePositions.items():
+        for coord in app.nodePositions.values():
             if coord != (-1,-1):
                 self.placeNodesCheckBox.select()
                 break
@@ -483,7 +483,7 @@ class inputDataPage(ctk.CTkFrame):
         for y in range(len(self.mapCanvas.matrix)):
             for x in range(len(self.mapCanvas.matrix[y])):
                 self.mapCanvas.matrix[y][x]['base'] = 1
-        for node, available in self.nodes.items():
+        for node in self.nodes.keys():
             self.nodes[node] = True
             app.nodePositions[node] = (-1, -1)
         self.bullseyeButton.configure(state='normal')
@@ -614,10 +614,10 @@ class optimisePlanPage(ctk.CTkFrame):
             17:20
         }
 
-        WALKING_PACE = 1.4
-        DISTANCE_BETWEEN_PEOPLE = 0.6
-        PEOPLE_PER_METRE = 2
-        self.PEOPLE_PER_SECOND_PER_METRE = WALKING_PACE * PEOPLE_PER_METRE / DISTANCE_BETWEEN_PEOPLE
+        self.WALKING_PACE = 1.4
+        self.DISTANCE_BETWEEN_PEOPLE = 0.6
+        self.PEOPLE_PER_METRE = 2
+        self.PEOPLE_PER_SECOND_PER_METRE = self.WALKING_PACE * self.PEOPLE_PER_METRE / self.DISTANCE_BETWEEN_PEOPLE
         self.acceptableEvacuationTime = 9999
         
         self.configure(bg_color='white', fg_color='white')
@@ -650,6 +650,8 @@ class optimisePlanPage(ctk.CTkFrame):
         self.rightFrame.rowconfigure((3,4,5), weight=1)
         self.padder = ctk.CTkFrame(self.rightFrame, bg_color='white', fg_color='white')
         self.evacPointLabel = ctk.CTkLabel(self.rightFrame, text='Evac\nPoint', font=('Excalifont',20), text_color='black')
+        self.timeLabel = ctk.CTkLabel(self, text='Time: ---', text_color='black')
+        self.timeSlider = ctk.CTkSlider(self, from_=0, to=100, command=self.updateTimeLabel, state='disabled')
         self.evacPointButton = ctk.CTkButton(self.rightFrame, text='', **ButtonStyling, command=lambda:self.after(100, self.handleEvacPointClick), image=self.fire)
         self.chooseNodeLabel = ctk.CTkLabel(self.rightFrame, text='Choose\nNode', font=('Excalifont',20), text_color='black')
         self.chooseNodeButton = ctk.CTkButton(self.rightFrame, text='', **ButtonStyling, command=lambda:self.after(100, self.handleChooseNodeClick), image=self.fire)
@@ -658,10 +660,12 @@ class optimisePlanPage(ctk.CTkFrame):
         self.canvasContainer = ctk.CTkFrame(self.upperFrame, corner_radius=15, border_color='black', border_width=5, bg_color='white', fg_color='white')
         self.canvas = Canvas(parent=self.canvasContainer, width=960, height=640)
         self.showAllPaths = ctk.CTkButton(self, text='Show all Paths', **ButtonStyling, command=lambda: self.after(100, self.handleShowAllPathsClick))
+        self.simulateEvent = ctk.CTkButton(self, text='Simulate Event', **ButtonStyling, command=lambda: self.after(100, self.handleSimulateEventClick), state='disabled')
         self.handleHovering(self.evacPointButton)
         self.handleHovering(self.chooseNodeButton)
         self.handleHovering(self.runButton)
         self.handleHovering(self.showAllPaths)
+        self.handleHovering(self.simulateEvent)
 
         ButtonConfig = {
         'master':self.scrollFrame,
@@ -683,19 +687,65 @@ class optimisePlanPage(ctk.CTkFrame):
     
         self.Buttons={self.redButton:2, self.blueButton:3, self.greenButton:4, self.orangeButton:5, self.pinkButton:6, self.yellowButton:7}
         
-        for button, value in self.Buttons.items():
+        for button in self.Buttons.keys():
             button.bind('<Enter>', lambda event, b=button: self.buttonEnter(b))
             button.bind('<Leave>', lambda event, b=button: self.buttonLeave(b))
+    
+    def placeWidgets(self):
+        self.canvasContainer.pack(pady=(10,0), side='left')
+        self.rightFrame.pack(side='left', fill='both', expand=True, pady=(10,0))
+        self.canvas.pack(pady=10, padx=10)
+        self.upperFrame.pack(fill='both', expand=True)
+        self.simulateEvent.pack(side='left', fill='y', expand=True, pady=2, ipadx=75, ipady=5, padx=(0,10))
+        self.timeLabel.pack(side='left', fill='y', expand=True, pady=2, padx=5)
+        self.timeSlider.pack(side='left', padx=(0,131))
+        self.showAllPaths.pack(side='right', fill='y', expand=True, pady=2, ipadx=75, ipady=5)
+        self.padder.grid(column=0, row=2, sticky='nsew')
+        self.evacPointLabel.grid(column=0, row=0, sticky='nsew', padx=5)
+        self.evacPointButton.grid(column=0, row=1, sticky='nsew', padx=5)
+        self.chooseNodeLabel.grid(column=0, row=3, sticky='nsew', padx=5)
+        self.chooseNodeButton.grid(column=0, row=4, sticky='nsew', padx=5)
+        self.runButton.grid(column=0, row=5, sticky='nsew', padx=5, pady=(5,0))
+
+    def updateTimeLabel(self, value):
+        formattedValue = f'{int(value):03}'
+        self.timeLabel.configure(text=f'Time: {formattedValue}')
+
 
     def handleHovering(self,button):
         button.bind('<Enter>', lambda event: button.configure(text_color='white', fg_color='black'))
         button.bind('<Leave>', lambda event: button.configure(text_color='black', fg_color='white'))
+
+    def setMinimumTime(self):
+        minTime = 0
+        for path in self.paths.values():
+            if len(path) / self.WALKING_PACE > minTime:
+                minTime = math.ceil(len(path) / self.WALKING_PACE)
+        self.timeSlider.configure(from_=minTime, to=300)
+        
 
     def handleRunButtonClick(self):
         self.runButton.configure(text_color='black', fg_color='white')
         self.disableAllButtons()
         if self.evacPoint != -1 and self.startNode != -1:
             self.astar(self.startNode, self.evacPoint)
+            self.timeSlider.configure(state='normal')
+            self.simulateEvent.configure(state='normal')
+            self.setMinimumTime()
+            print(f'red {len(self.paths[12])}')
+        self.enableAllButtons()
+        app.simulationRan = True
+    
+    def handleShowAllPathsClick(self):
+        self.showAllPaths.configure(text_color='white', fg_color='black')
+        self.disableAllButtons()
+        if self.evacPoint != -1:
+            for node in app.nodePositions.keys():
+                if app.nodePositions[node] != (-1,-1) and node != self.evacPoint:
+                    self.astar(node, self.evacPoint)
+            self.timeSlider.configure(state='normal')
+            self.simulateEvent.configure(state='normal')
+            self.setMinimumTime()
         self.enableAllButtons()
         app.simulationRan = True
     
@@ -758,6 +808,7 @@ class optimisePlanPage(ctk.CTkFrame):
 
             self.after(1, run_algorithm_step)
         run_algorithm_step()
+        
         return True
 
     def deleteTemporarySquares(self, squareIDs):
@@ -776,99 +827,110 @@ class optimisePlanPage(ctk.CTkFrame):
         x2, y2 = point2
         return abs(x1 - x2) + abs(y1 - y2)
 
+    def handleSimulateEventClick(self):
+        self.disableAllButtons()
+        self.simulateEvent.configure(text_color='white', fg_color='black')
+        tempSquareIDs = self.runFlowSimulation()
+        # self.deleteTemporarySquares(tempSquareIDs)
+        self.enableAllButtons()
+
     def runFlowSimulation(self):
         problems = []
         tempSquareIDs = []
-        for path, data in self.paths.items():
+        pathWidths = []
+        for path in self.paths.keys():
             if self.paths[path]:
                 for position in self.paths[path]:
                     pathWidth = 1
                     if position[1] < 79 and path not in self.canvas.matrix[position[1] + 1][position[0]].get('paths', []) and position[1] > 0 and path not in self.canvas.matrix[position[1] - 1][position[0]].get('paths', []): # path is horizontal
                         tempCount  = 0
-                        while True:
+                        while tempCount < 10:
                             if position[1] + tempCount < 79 and self.canvas.matrix[position[1] + tempCount + 1][position[0]]['base'] != 0:
                                 tempCount += 1
-                                squareID = self.canvas.creation(position[0], position[1] + tempCount + 1, 9, True)
+                                squareID = self.canvas.creation(position[0], position[1] + tempCount, 9, True)
                                 tempSquareIDs.append(squareID)
                             else:
                                 pathWidth += tempCount
                                 break
                         tempCount  = 0
-                        while True:
+                        while tempCount < 10:
                             if position[1] - tempCount > 0 and self.canvas.matrix[position[1] - tempCount - 1][position[0]]['base'] != 0:
                                 tempCount += 1
-                                squareID = self.canvas.creation(position[0], position[1] - tempCount - 1, 9, True)
+                                squareID = self.canvas.creation(position[0], position[1] - tempCount, 9, True)
                                 tempSquareIDs.append(squareID)
                             else:
                                 pathWidth += tempCount
                                 break
                     elif position[0] < 119 and path not in self.canvas.matrix[position[1]][position[0] + 1].get('paths', []) and position[0] > 0 and path not in self.canvas.matrix[position[1]][position[0] - 1].get('paths', []): # path vertical
                         tempCount  = 0
-                        while True:
+                        while tempCount < 10:
                             if position[0] + tempCount < 119 and self.canvas.matrix[position[1]][position[0] + tempCount + 1]['base'] != 0:
                                 tempCount += 1
-                                squareID = self.canvas.creation(position[0] + tempCount + 1, position[1], 9, True)
+                                squareID = self.canvas.creation(position[0] + tempCount, position[1], 9, True)
                                 tempSquareIDs.append(squareID)
                             else:
                                 pathWidth += tempCount
                                 break
                         tempCount  = 0
-                        while True:
+                        while tempCount < 10:
                             if position[0] - tempCount > 0 and self.canvas.matrix[position[1]][position[0] - tempCount - 1]['base'] != 0:
                                 tempCount += 1
-                                squareID = self.canvas.creation(position[0] + tempCount - 1, position[1], 9, True)
+                                squareID = self.canvas.creation(position[0] - tempCount, position[1], 9, True)
                                 tempSquareIDs.append(squareID)
                             else:
                                 pathWidth += tempCount
                                 break
                     elif position[1] < 79 and path not in self.canvas.matrix[position[1] + 1][position[0]].get('paths', []) and position[0] < 119 and path not in self.canvas.matrix[position[1]][position[0] + 1].get('paths', []):
-                        # Right + Up not path
                         outsideWall = self.findNearestWall(position, (1, 1))
                         if 0 <= position[0] - 1 <= 119 and 0 <= position[1] - 1 <= 79:
                             if self.canvas.matrix[position[1] - 1][position[0] - 1]['base'] == 0:
                                 insideWall = (position[0] - 1, position[1] - 1)
                             else:
                                 insideWall = self.findNearestWall((position[0] - 1, position[1] - 1), (-1, -1))
-                            pathWidth  = self.calculateDistance(outsideWall, insideWall)
-                            tempSquareIDs += self.drawLine(insideWall, outsideWall)
                         else:
                             insideWall = (position[0] - 1, position[1] - 1)
+                        pathWidth  = self.calculateDistance(outsideWall, insideWall)
+                        print(f'Bottom Right corner, drawing line between: {insideWall} and {outsideWall} pathwidth = {pathWidth}')
+                        tempSquareIDs += self.drawLine(insideWall, outsideWall)
+
                     elif position[1] < 79 and path not in self.canvas.matrix[position[1] + 1][position[0]].get('paths', []) and position[0] > 0 and path not in self.canvas.matrix[position[1]][position[0] - 1].get('paths', []):
-                        # Left + up not path
                         outsideWall = self.findNearestWall(position, (-1, 1))
                         if 0 <= position[0] + 1 <= 119 and 0 <= position[1] - 1 <= 79:
                             if self.canvas.matrix[position[1] - 1][position[0] + 1]['base'] == 0:
                                 insideWall = (position[0] + 1, position[1] - 1)
                             else:
                                 insideWall = self.findNearestWall((position[0] + 1, position[1] - 1), (1, -1))
-                            pathWidth  = self.calculateDistance(outsideWall, insideWall)
-                            tempSquareIDs += self.drawLine(insideWall, outsideWall)
                         else:
                             insideWall = (position[0] + 1, position[1] - 1)
+                        pathWidth  = self.calculateDistance(outsideWall, insideWall)
+                        print(f'Bottom Left corner, drawing line between: {insideWall} and {outsideWall} pathwidth = {pathWidth}')
+                        tempSquareIDs += self.drawLine(insideWall, outsideWall)
+
                     elif position[1] > 0 and path not in self.canvas.matrix[position[1] - 1][position[0]].get('paths', []) and position[0] < 119 and path not in self.canvas.matrix[position[1]][position[0] + 1].get('paths', []):
-                        # Right + Down not path
                         outsideWall = self.findNearestWall(position, (1, -1))
                         if 0 <= position[0] - 1 <= 119 and 0 <= position[1] + 1 <= 79:
                             if self.canvas.matrix[position[1] + 1][position[0] - 1]['base'] == 0:
                                 insideWall = (position[0] - 1, position[1] + 1)
                             else:
                                 insideWall = self.findNearestWall((position[0] - 1, position[1] + 1), (-1, 1))
-                            pathWidth  = self.calculateDistance(outsideWall, insideWall)
-                            tempSquareIDs += self.drawLine(insideWall, outsideWall)
                         else:
                             insideWall = (position[0] - 1, position[1] + 1)
+                        pathWidth  = self.calculateDistance(outsideWall, insideWall)
+                        print(f'Top Right corner, drawing line between: {insideWall} and {outsideWall} pathwidth = {pathWidth}')
+                        tempSquareIDs += self.drawLine(insideWall, outsideWall)
+
                     elif position[1] > 0 and path not in self.canvas.matrix[position[1] - 1][position[0]].get('paths', []) and position[0] > 0 and path not in self.canvas.matrix[position[1]][position[0] - 1].get('paths', []):
-                        # Left + Down not path
                         outsideWall = self.findNearestWall(position, (-1, -1))
                         if 0 <= position[0] + 1 <= 119 and 0 <= position[1] + 1 <= 79:
                             if self.canvas.matrix[position[1] + 1][position[0] + 1]['base'] == 0:
                                 insideWall = (position[0] + 1, position[1] + 1)
                             else:
                                 insideWall = self.findNearestWall((position[0] + 1, position[1] + 1), (1, 1))
-                            pathWidth  = self.calculateDistance(outsideWall, insideWall)
-                            tempSquareIDs += self.drawLine(insideWall, outsideWall)
                         else:
                             insideWall = (position[0] + 1, position[1] + 1)
+                        pathWidth  = self.calculateDistance(outsideWall, insideWall)
+                        print(f'Top Left corner, drawing line between: {insideWall} and {outsideWall} pathwidth = {pathWidth}')
+                        tempSquareIDs += self.drawLine(insideWall, outsideWall)
 
                     people = 0
 
@@ -877,10 +939,11 @@ class optimisePlanPage(ctk.CTkFrame):
                         
                     desiredFlow = people / self.acceptableEvacuationTime
                     minWidth = desiredFlow / self.PEOPLE_PER_SECOND_PER_METRE
-                    
+                    pathWidths.append((position, pathWidth))
                     if pathWidth < minWidth:
                         problems.append(position)
-        self.deleteTemporarySquares(tempSquareIDs)
+            print(pathWidths)
+        return tempSquareIDs
 
     def findNearestWall(self, corner, direction):
         nearestWall = (-1,-1)
@@ -927,8 +990,9 @@ class optimisePlanPage(ctk.CTkFrame):
             y = y0
             p = 2 * dy - dx
             for i in range(dx + 1):
-                pixelID = self.canvas.creation(x0 + i, y, 8, True)
-                tempPixels.append(pixelID)
+                if i != 0 and y != y0 and x0 + i != x1 and y != y1:
+                    pixelID = self.canvas.creation(x0 + i, y, 6, True)
+                    tempPixels.append(pixelID)
                 if p >= 0:
                     y += direction
                     p = p - 2 * dx
@@ -953,8 +1017,9 @@ class optimisePlanPage(ctk.CTkFrame):
             x = x0
             p = 2 * dx - dy
             for i in range(dy + 1):
-                pixelID = self.canvas.creation(x, y0 + i, 8, True)
-                tempPixels.append(pixelID)
+                if x != x0 and i != 0 and x != x1 and y0 + i != y1:
+                    pixelID = self.canvas.creation(x, y0 + i, 6, True)
+                    tempPixels.append(pixelID)
                 if p >= 0:
                     x += direction
                     p = p - 2 * dy
@@ -1014,7 +1079,7 @@ class optimisePlanPage(ctk.CTkFrame):
                 self.chooseNodeButton.configure(image=self.yellow)
     
     def resetButtons(self):
-        for button, value in self.Buttons.items():
+        for button in self.Buttons.keys():
             button.configure(state='enabled', fg_color='white')
             button.pack_forget()
         self.evacPoint = -1
@@ -1044,19 +1109,6 @@ class optimisePlanPage(ctk.CTkFrame):
         button.configure(border_width=2)
         button.pack_configure(pady=2)
     
-    def placeWidgets(self):
-        self.canvasContainer.pack(pady=(10,0), side='left')
-        self.rightFrame.pack(side='left', fill='both', expand=True, pady=(10,0))
-        self.canvas.pack(pady=10, padx=10)
-        self.upperFrame.pack(fill='both', expand=True)
-        self.showAllPaths.pack(fill='y', expand=True, pady=5, ipadx=75)
-        self.padder.grid(column=0, row=2, sticky='nsew')
-        self.evacPointLabel.grid(column=0, row=0, sticky='nsew', padx=5)
-        self.evacPointButton.grid(column=0, row=1, sticky='nsew', padx=5)
-        self.chooseNodeLabel.grid(column=0, row=3, sticky='nsew', padx=5)
-        self.chooseNodeButton.grid(column=0, row=4, sticky='nsew', padx=5)
-        self.runButton.grid(column=0, row=5, sticky='nsew', padx=5, pady=(5,0))
-
     def handleEvacPointClick(self):
         self.evacPointButton.configure(text_color='black', fg_color='white')
         self.startOrEndNode = "end"
@@ -1085,15 +1137,6 @@ class optimisePlanPage(ctk.CTkFrame):
         self.scrollFrame.grid(column=0, row=2, sticky='nsew')
         self.nodeChooserOpen = True
 
-    def handleShowAllPathsClick(self):
-        self.showAllPaths.configure(text_color='white', fg_color='black')
-        self.disableAllButtons()
-        if self.evacPoint != -1:
-            for node, value in app.nodePositions.items():
-                if app.nodePositions[node] != (-1,-1) and node != self.evacPoint:
-                    self.astar(node, self.evacPoint)
-        self.enableAllButtons()
-        app.simulationRan = True
 
 class Canvas(ctk.CTkCanvas):
     def __init__(self, parent, height, width):
@@ -1137,7 +1180,7 @@ class Canvas(ctk.CTkCanvas):
                 colour = purple
 
         self.master.master.master.master.dataAdded.set(True)
-        print(f'drawing at x:{x}, y:{y}, colour={colour}, colourValue={colourValue}')
+        # print(f'drawing at x:{x}, y:{y}, colour={colour}, colourValue={colourValue}')
         if not temporary:
             self.create_rectangle((self.pixelSize * (x+1) - self.pixelSize, self.pixelSize * (y+1) - self.pixelSize, self.pixelSize * (x+1) - 1, self.pixelSize * (y+1) - 1), fill=colour, outline=colour)
             if colourValue < 12:
