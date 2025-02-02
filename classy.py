@@ -37,6 +37,7 @@ class App(tk.Tk):
         self.resizable(False,False)
         self.matrix = [[{'base': 1} for _ in range(120)] for _ in range(80)]
         self.nodePositions = {2:(-1,-1), 3:(-1,-1), 4:(-1,-1), 5:(-1,-1), 6:(-1,-1), 7:(-1,-1)}
+        self.capacityValues={2:-1,3:-1,4:-1,5:-1,6:-1,7:-1}
         self.dataAdded = ctk.BooleanVar(value=False)
         self.simulationRan = False
     
@@ -311,8 +312,11 @@ class inputDataPage(ctk.CTkFrame):
         if self.capacityInputOpen:
             self.capacityDataPage.place_forget()
             self.capacityButton.configure(text='Input Capacity Data')
+            app.capacityValues = self.capacityDataPage.getValues()
+            print(f'capacity values: {app.capacityValues}')
             self.capacityInputOpen = False
         else:
+            self.capacityDataPage.refresh()
             self.capacityDataPage.place(x = 200, y = 350)
             self.capacityButton.configure(text='Done')
             self.capacityInputOpen = True
@@ -869,7 +873,7 @@ class optimisePlanPage(ctk.CTkFrame):
                     people = 0
 
                     for group in self.canvas.matrix[position[1]][position[0]]['paths']:
-                        people += self.capacityData[group]
+                        people += app.capacityValues[group - 10]
                         
                     desiredFlow = people / self.acceptableEvacuationTime
                     minWidth = desiredFlow / self.PEOPLE_PER_SECOND_PER_METRE
@@ -1220,6 +1224,7 @@ class capacityDataInput(ctk.CTkFrame):
     def __init__(self, parent):
         super().__init__(parent)
         self.configure(height=200, width=400, corner_radius=15, border_color='black', border_width=5, bg_color='white', fg_color='white')
+        self.values={2:-1,3:-1,4:-1,5:-1,6:-1,7:-1}
         self.createWidgets()
         self.placeWidgets()
 
@@ -1241,9 +1246,23 @@ class capacityDataInput(ctk.CTkFrame):
         self.pinkEntry = nodeWidget(self.scrollFrame, image=self.pink)
         self.yellowEntry = nodeWidget(self.scrollFrame, image=self.yellow)
 
+        self.entries={self.redEntry:2, self.blueEntry:3, self.greenEntry:4, self.orangeEntry:5, self.pinkEntry:6, self.yellowEntry:7}
+        
     def placeWidgets(self):
         self.titleLabel.pack(padx=200, pady=10)
         self.scrollFrame.pack(padx=10, pady=(0,10), expand=True, fill='both')
+
+    def refresh(self):
+        for entry, node in self.entries.items():
+            entry.pack_forget()
+        for entry, node in self.entries.items():
+            if app.nodePositions[node] != (-1,-1):
+                entry.pack(pady=2)
+    
+    def getValues(self):
+        for entry, node in self.entries.items():
+            self.values[node] = int(entry.getEntry() or -1)
+        return self.values
 
 class nodeWidget(ctk.CTkFrame):
     def __init__(self, parent, image):
@@ -1262,6 +1281,8 @@ class nodeWidget(ctk.CTkFrame):
         self.label.pack(padx=10, pady=(10,0))
         self.entryField.pack(pady=10, padx=(10,20))
 
+    def getEntry(self):
+        return self.entryField.get()
  
 if __name__ == '__main__':
     app = App()
