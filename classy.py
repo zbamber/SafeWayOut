@@ -718,7 +718,8 @@ class optimisePlanPage(ctk.CTkFrame):
 
     def setMinimumTime(self):
         minTime = 0
-        for path in self.paths.values():
+        for key, path in self.paths.items():
+            print(f'length of {key}: {len(path)}')
             if len(path) / self.WALKING_PACE > minTime:
                 minTime = math.ceil(len(path) / self.WALKING_PACE)
         self.timeSlider.configure(from_=minTime, to=300)
@@ -820,7 +821,9 @@ class optimisePlanPage(ctk.CTkFrame):
             current = previousNodes[current]
             if current != start:
                 self.canvas.creation(current[0], current[1], startNode+10, False)
+                print(f'current: {current}')
                 self.paths[startNode+10].append(current)
+                print(f'paths: {self.paths}')
     
     def heuristic(self, point1, point2):
         x1, y1 = point1
@@ -942,7 +945,9 @@ class optimisePlanPage(ctk.CTkFrame):
                     pathWidths.append((position, pathWidth))
                     if pathWidth < minWidth:
                         problems.append(position)
-            print(pathWidths)
+        
+        print(f'pathwidths: {pathWidths}')
+        print(f'problems: {problems}')
         return tempSquareIDs
 
     def findNearestWall(self, corner, direction):
