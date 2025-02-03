@@ -719,9 +719,10 @@ class optimisePlanPage(ctk.CTkFrame):
     def setMinimumTime(self):
         minTime = 0
         for key, path in self.paths.items():
-            print(f'length of {key}: {len(path)}')
+            print(f'{key}: length: {len(path)}')
             if len(path) / self.WALKING_PACE > minTime:
                 minTime = math.ceil(len(path) / self.WALKING_PACE)
+                print(f'min time {minTime}')
         self.timeSlider.configure(from_=minTime, to=300)
         
 
@@ -732,9 +733,9 @@ class optimisePlanPage(ctk.CTkFrame):
             self.astar(self.startNode, self.evacPoint)
             self.timeSlider.configure(state='normal')
             self.simulateEvent.configure(state='normal')
-            self.setMinimumTime()
             print(f'red {len(self.paths[12])}')
         self.enableAllButtons()
+        self.setMinimumTime()
         app.simulationRan = True
     
     def handleShowAllPathsClick(self):
@@ -777,6 +778,10 @@ class optimisePlanPage(ctk.CTkFrame):
 
             if current == end:
                 self.reconstructPath(previousNodes, start, current, startNode)
+                self.timeSlider.configure(state='normal')
+                self.simulateEvent.configure(state='normal')
+                self.enableAllButtons()
+                self.setMinimumTime()
                 self.after(250, self.deleteTemporarySquares(tempSquareIDs))
                 app.matrix = copy.deepcopy(self.canvas.matrix)
                 return True
@@ -821,9 +826,7 @@ class optimisePlanPage(ctk.CTkFrame):
             current = previousNodes[current]
             if current != start:
                 self.canvas.creation(current[0], current[1], startNode+10, False)
-                print(f'current: {current}')
                 self.paths[startNode+10].append(current)
-                print(f'paths: {self.paths}')
     
     def heuristic(self, point1, point2):
         x1, y1 = point1
