@@ -826,6 +826,7 @@ class optimisePlanPage(ctk.CTkFrame):
     def handleSimulateEventClick(self):
         self.disableAllButtons()
         self.simulateEvent.configure(text_color='white', fg_color='black')
+
         tempSquareIDs = self.runFlowSimulation()
         # self.deleteTemporarySquares(tempSquareIDs)
         self.enableAllButtons()
@@ -843,8 +844,8 @@ class optimisePlanPage(ctk.CTkFrame):
                         while tempCount < app.capacityValues[path - 10] / self.PEOPLE_PER_SECOND_PER_METRE:
                             if position[1] + tempCount < 79 and self.canvas.matrix[position[1] + tempCount + 1][position[0]]['base'] != 0:
                                 tempCount += 1
-                                squareID = self.canvas.creation(position[0], position[1] + tempCount, 9, True)
-                                tempSquareIDs.append(squareID)
+                                # squareID = self.canvas.creation(position[0], position[1] + tempCount, 9, True)
+                                # tempSquareIDs.append(squareID)
                                 print(tempCount)
                             else:
                                 print(f'tempCount to pathwidth {tempCount}')
@@ -856,8 +857,8 @@ class optimisePlanPage(ctk.CTkFrame):
                         while tempCount < app.capacityValues[path - 10] / self.PEOPLE_PER_SECOND_PER_METRE:
                             if position[1] - tempCount > 0 and self.canvas.matrix[position[1] - tempCount - 1][position[0]]['base'] != 0:
                                 tempCount += 1
-                                squareID = self.canvas.creation(position[0], position[1] - tempCount, 9, True)
-                                tempSquareIDs.append(squareID)
+                                # squareID = self.canvas.creation(position[0], position[1] - tempCount, 9, True)
+                                # tempSquareIDs.append(squareID)
                                 print(tempCount)
                             else:
                                 print(f'tempCount to pathwidth {tempCount}')
@@ -870,8 +871,8 @@ class optimisePlanPage(ctk.CTkFrame):
                         while tempCount < app.capacityValues[path - 10] / self.PEOPLE_PER_SECOND_PER_METRE:
                             if position[0] + tempCount < 119 and self.canvas.matrix[position[1]][position[0] + tempCount + 1]['base'] != 0:
                                 tempCount += 1
-                                squareID = self.canvas.creation(position[0] + tempCount, position[1], 9, True)
-                                tempSquareIDs.append(squareID)
+                                # squareID = self.canvas.creation(position[0] + tempCount, position[1], 9, True)
+                                # tempSquareIDs.append(squareID)
                             else:
                                 pathWidth += tempCount
                                 break
@@ -881,8 +882,8 @@ class optimisePlanPage(ctk.CTkFrame):
                         while tempCount < app.capacityValues[path - 10] / self.PEOPLE_PER_SECOND_PER_METRE:
                             if position[0] - tempCount > 0 and self.canvas.matrix[position[1]][position[0] - tempCount - 1]['base'] != 0:
                                 tempCount += 1
-                                squareID = self.canvas.creation(position[0] - tempCount, position[1], 9, True)
-                                tempSquareIDs.append(squareID)
+                                # squareID = self.canvas.creation(position[0] - tempCount, position[1], 9, True)
+                                # tempSquareIDs.append(squareID)
                             else:
                                 pathWidth += tempCount
                                 break
@@ -899,7 +900,7 @@ class optimisePlanPage(ctk.CTkFrame):
                             insideWall = (position[0] - 1, position[1] - 1)
                         pathWidth  = self.calculateDistance(outsideWall, insideWall)
                         print(f'Bottom Right corner, drawing line between: {insideWall} and {outsideWall} pathwidth = {pathWidth}')
-                        tempSquareIDs += self.drawLine(insideWall, outsideWall)
+                        # tempSquareIDs += self.drawLine(insideWall, outsideWall)
 
                     elif position[1] < 79 and path not in self.canvas.matrix[position[1] + 1][position[0]].get('paths', []) and position[0] > 0 and path not in self.canvas.matrix[position[1]][position[0] - 1].get('paths', []):
                         outsideWall = self.findNearestWall(position, (-1, 1))
@@ -912,7 +913,7 @@ class optimisePlanPage(ctk.CTkFrame):
                             insideWall = (position[0] + 1, position[1] - 1)
                         pathWidth  = self.calculateDistance(outsideWall, insideWall)
                         print(f'Bottom Left corner, drawing line between: {insideWall} and {outsideWall} pathwidth = {pathWidth}')
-                        tempSquareIDs += self.drawLine(insideWall, outsideWall)
+                        # tempSquareIDs += self.drawLine(insideWall, outsideWall)
 
                     elif position[1] > 0 and path not in self.canvas.matrix[position[1] - 1][position[0]].get('paths', []) and position[0] < 119 and path not in self.canvas.matrix[position[1]][position[0] + 1].get('paths', []):
                         outsideWall = self.findNearestWall(position, (1, -1))
@@ -925,7 +926,7 @@ class optimisePlanPage(ctk.CTkFrame):
                             insideWall = (position[0] - 1, position[1] + 1)
                         pathWidth  = self.calculateDistance(outsideWall, insideWall)
                         print(f'Top Right corner, drawing line between: {insideWall} and {outsideWall} pathwidth = {pathWidth}')
-                        tempSquareIDs += self.drawLine(insideWall, outsideWall)
+                        # tempSquareIDs += self.drawLine(insideWall, outsideWall)
 
                     elif position[1] > 0 and path not in self.canvas.matrix[position[1] - 1][position[0]].get('paths', []) and position[0] > 0 and path not in self.canvas.matrix[position[1]][position[0] - 1].get('paths', []):
                         outsideWall = self.findNearestWall(position, (-1, -1))
@@ -938,7 +939,7 @@ class optimisePlanPage(ctk.CTkFrame):
                             insideWall = (position[0] + 1, position[1] + 1)
                         pathWidth  = self.calculateDistance(outsideWall, insideWall)
                         print(f'Top Left corner, drawing line between: {insideWall} and {outsideWall} pathwidth = {pathWidth}')
-                        tempSquareIDs += self.drawLine(insideWall, outsideWall)
+                        # tempSquareIDs += self.drawLine(insideWall, outsideWall)
 
                     people = 0
 
