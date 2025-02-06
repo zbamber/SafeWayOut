@@ -605,20 +605,10 @@ class optimisePlanPage(ctk.CTkFrame):
             17:[]
         }
 
-        self.capacityData = {
-            12:20,
-            13:20,
-            14:20,
-            15:20,
-            16:20,
-            17:20
-        }
-
         self.WALKING_PACE = 1.4
         self.DISTANCE_BETWEEN_PEOPLE = 0.6
         self.PEOPLE_PER_METRE = 2
         self.PEOPLE_PER_SECOND_PER_METRE = self.WALKING_PACE * self.PEOPLE_PER_METRE / self.DISTANCE_BETWEEN_PEOPLE
-        self.acceptableEvacuationTime = 9999
         
         self.configure(bg_color='white', fg_color='white')
         self.createWidgets()
@@ -850,7 +840,7 @@ class optimisePlanPage(ctk.CTkFrame):
                     pathWidth = 1
                     if position[1] < 79 and path not in self.canvas.matrix[position[1] + 1][position[0]].get('paths', []) and position[1] > 0 and path not in self.canvas.matrix[position[1] - 1][position[0]].get('paths', []): # path is horizontal
                         tempCount  = 0
-                        while tempCount < 10:
+                        while tempCount < app.capacityValues[path - 10] / self.PEOPLE_PER_SECOND_PER_METRE:
                             if position[1] + tempCount < 79 and self.canvas.matrix[position[1] + tempCount + 1][position[0]]['base'] != 0:
                                 tempCount += 1
                                 squareID = self.canvas.creation(position[0], position[1] + tempCount, 9, True)
@@ -859,7 +849,7 @@ class optimisePlanPage(ctk.CTkFrame):
                                 pathWidth += tempCount
                                 break
                         tempCount  = 0
-                        while tempCount < 10:
+                        while tempCount < app.capacityValues[path - 10] / self.PEOPLE_PER_SECOND_PER_METRE:
                             if position[1] - tempCount > 0 and self.canvas.matrix[position[1] - tempCount - 1][position[0]]['base'] != 0:
                                 tempCount += 1
                                 squareID = self.canvas.creation(position[0], position[1] - tempCount, 9, True)
@@ -869,7 +859,7 @@ class optimisePlanPage(ctk.CTkFrame):
                                 break
                     elif position[0] < 119 and path not in self.canvas.matrix[position[1]][position[0] + 1].get('paths', []) and position[0] > 0 and path not in self.canvas.matrix[position[1]][position[0] - 1].get('paths', []): # path vertical
                         tempCount  = 0
-                        while tempCount < 10:
+                        while tempCount < app.capacityValues[path - 10] / self.PEOPLE_PER_SECOND_PER_METRE:
                             if position[0] + tempCount < 119 and self.canvas.matrix[position[1]][position[0] + tempCount + 1]['base'] != 0:
                                 tempCount += 1
                                 squareID = self.canvas.creation(position[0] + tempCount, position[1], 9, True)
@@ -878,7 +868,7 @@ class optimisePlanPage(ctk.CTkFrame):
                                 pathWidth += tempCount
                                 break
                         tempCount  = 0
-                        while tempCount < 10:
+                        while tempCount < app.capacityValues[path - 10] / self.PEOPLE_PER_SECOND_PER_METRE:
                             if position[0] - tempCount > 0 and self.canvas.matrix[position[1]][position[0] - tempCount - 1]['base'] != 0:
                                 tempCount += 1
                                 squareID = self.canvas.creation(position[0] - tempCount, position[1], 9, True)
@@ -940,17 +930,20 @@ class optimisePlanPage(ctk.CTkFrame):
 
                     people = 0
 
-                    for group in self.canvas.matrix[position[1]][position[0]]['paths']:
+                    for group in self.canvas.matrix[position[1]][position[0]].get('paths', []):
                         people += app.capacityValues[group - 10]
                         
-                    desiredFlow = people / self.acceptableEvacuationTime
+                    # print(f'people {people} evacTime: {self.timeSlider.get()}')
+                    desiredFlow = people / self.timeSlider.get()
                     minWidth = desiredFlow / self.PEOPLE_PER_SECOND_PER_METRE
                     pathWidths.append((position, pathWidth))
                     if pathWidth < minWidth:
                         problems.append(position)
         
         print(f'pathwidths: {pathWidths}')
-        print(f'problems: {problems}')
+        # print(f'problems: {problems}')
+        for problem in problems:
+            self.canvas.creation(problem[0], problem[1], 2, False)
         return tempSquareIDs
 
     def findNearestWall(self, corner, direction):

@@ -1,2 +1,6 @@
-aList = [1,2,3,4,5,6]
-print(len(aList))
+minWidth = 3
+pathWidths = []
+pathWidths.append((1,1), 6)
+problemRankings = []
+for item in pathWidths:
+    problemRankings.append()
