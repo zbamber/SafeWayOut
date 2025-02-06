@@ -845,18 +845,26 @@ class optimisePlanPage(ctk.CTkFrame):
                                 tempCount += 1
                                 squareID = self.canvas.creation(position[0], position[1] + tempCount, 9, True)
                                 tempSquareIDs.append(squareID)
+                                print(tempCount)
                             else:
+                                print(f'tempCount to pathwidth {tempCount}')
                                 pathWidth += tempCount
                                 break
+                        else:
+                            pathWidth += tempCount
                         tempCount  = 0
                         while tempCount < app.capacityValues[path - 10] / self.PEOPLE_PER_SECOND_PER_METRE:
                             if position[1] - tempCount > 0 and self.canvas.matrix[position[1] - tempCount - 1][position[0]]['base'] != 0:
                                 tempCount += 1
                                 squareID = self.canvas.creation(position[0], position[1] - tempCount, 9, True)
                                 tempSquareIDs.append(squareID)
+                                print(tempCount)
                             else:
+                                print(f'tempCount to pathwidth {tempCount}')
                                 pathWidth += tempCount
                                 break
+                        else:
+                            pathWidth += tempCount
                     elif position[0] < 119 and path not in self.canvas.matrix[position[1]][position[0] + 1].get('paths', []) and position[0] > 0 and path not in self.canvas.matrix[position[1]][position[0] - 1].get('paths', []): # path vertical
                         tempCount  = 0
                         while tempCount < app.capacityValues[path - 10] / self.PEOPLE_PER_SECOND_PER_METRE:
@@ -867,6 +875,8 @@ class optimisePlanPage(ctk.CTkFrame):
                             else:
                                 pathWidth += tempCount
                                 break
+                        else:
+                            pathWidth += tempCount
                         tempCount  = 0
                         while tempCount < app.capacityValues[path - 10] / self.PEOPLE_PER_SECOND_PER_METRE:
                             if position[0] - tempCount > 0 and self.canvas.matrix[position[1]][position[0] - tempCount - 1]['base'] != 0:
@@ -876,6 +886,8 @@ class optimisePlanPage(ctk.CTkFrame):
                             else:
                                 pathWidth += tempCount
                                 break
+                        else:
+                            pathWidth += tempCount
                     elif position[1] < 79 and path not in self.canvas.matrix[position[1] + 1][position[0]].get('paths', []) and position[0] < 119 and path not in self.canvas.matrix[position[1]][position[0] + 1].get('paths', []):
                         outsideWall = self.findNearestWall(position, (1, 1))
                         if 0 <= position[0] - 1 <= 119 and 0 <= position[1] - 1 <= 79:
@@ -933,18 +945,37 @@ class optimisePlanPage(ctk.CTkFrame):
                     for group in self.canvas.matrix[position[1]][position[0]].get('paths', []):
                         people += app.capacityValues[group - 10]
                         
-                    # print(f'people {people} evacTime: {self.timeSlider.get()}')
-                    desiredFlow = people / self.timeSlider.get()
-                    minWidth = desiredFlow / self.PEOPLE_PER_SECOND_PER_METRE
                     pathWidths.append((position, pathWidth))
-                    if pathWidth < minWidth:
+
+                # print(f'people {people} evacTime: {self.timeSlider.get()}')
+                desiredFlow = people / self.timeSlider.get()
+                minWidth = desiredFlow / self.PEOPLE_PER_SECOND_PER_METRE
+
+                print(f'pathwidths: {pathWidths}')
+                pathWidths.sort(key=lambda element: element[1] / minWidth)
+                print(f'orderd pathwidths: {pathWidths}')
+
+                counter = 0
+                previous = -1
+
+                for position in pathWidths:
+                    if counter > 20 and position[1] != previous:
+                        break
+                    if position[1] < minWidth:
                         problems.append(position)
-        
-        print(f'pathwidths: {pathWidths}')
+                        self.canvas.creation(position[0][0], position[0][1], 2, False)
+                    else:
+                        problems.append(position)
+                        self.canvas.creation(position[0][0], position[0][1], 5, False)
+                    counter += 1
+                    previous = position[1]
+                    
+
+
         # print(f'problems: {problems}')
-        for problem in problems:
-            self.canvas.creation(problem[0], problem[1], 2, False)
-        return tempSquareIDs
+        # for problem in problems:
+        #     self.canvas.creation(problem[0], problem[1], 2, False)
+        # return tempSquareIDs
 
     def findNearestWall(self, corner, direction):
         nearestWall = (-1,-1)

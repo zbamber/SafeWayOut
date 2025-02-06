@@ -1,6 +1,5 @@
-minWidth = 3
-pathWidths = []
-pathWidths.append((1,1), 6)
-problemRankings = []
-for item in pathWidths:
-    problemRankings.append()
+position = (1,2)
+compound = (position, 3)
+print(f'pathwidth = {compound[1]}')
+print(f'x= {compound[0][0]}')
+print(f'y= {compound[0][1]}')
