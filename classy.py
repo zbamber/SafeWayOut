@@ -355,8 +355,11 @@ class inputDataPage(ctk.CTkFrame):
         self.configureTextButtons(self.capacityButton)
 
         # these two widgets use custom classes to allow for more complex designs
-        self.overwriteWarning = overwriteWarning(self)
+        self.overwriteWarning = warningWidget(self, 'Are you sure you want to overwrite the data', confirmCommand=self.overwrite)
         self.capacityDataPage = capacityDataInput(self)
+
+    def overwrite(self):
+        self.readFile()
 
     def placeWidgets(self):
         # placing the mapcontainer and tool container frames side by side
@@ -808,6 +811,10 @@ class optimisePlanPage(ctk.CTkFrame):
         self.simulateEvent = ctk.CTkButton(self, text='Simulate Event', **ButtonStyling, command=lambda: self.after(100, self.handleSimulateEventClick), state='disabled')
         self.timeLabel = ctk.CTkLabel(self, text='Time: ---', text_color='black')
         self.timeSlider = ctk.CTkSlider(self, from_=0, to=100, command=self.updateTimeLabel, state='disabled')
+        self.capacityWarning = warningWidget(self, message='Capacity Data for all paths needed')
+        self.evacPointWarning = warningWidget(self, message='Must select an Evac Point')
+        self.startNodeWarning = warningWidget(self, message='Must select a Start Node')
+        self.noSelectionWarning = warningWidget(self, message='Must Select Start Node and Evac Point')
 
         # helper function to define the hovering behaviour for these buttons
         self.handleHovering(self.evacPointButton)
@@ -941,7 +948,7 @@ class optimisePlanPage(ctk.CTkFrame):
         while current in previousNodes:
             current = previousNodes[current]
             if current != start:
-                self.canvas.creation(current[0], current[1], startNode+14, False)
+                self.canvas.creation(current[0], current[1], startNode+10, False)
                 self.paths[startNode+10].append(current)
     
     def heuristic(self, point1, point2): # function to calculate the heuristic for the A* algorithm *explained in the report*
@@ -1089,13 +1096,13 @@ class optimisePlanPage(ctk.CTkFrame):
 
     def getSeverityColour(self, severity):
         if severity == 1:
-            return 10
+            return 20
         elif severity >= 0.7:
-            return 11
+            return 21
         elif severity >= 0.3:
-            return 12
+            return 22
         else:
-            return 13
+            return 23
         
 
     def isValidPosition(self, x, y):
@@ -1288,6 +1295,12 @@ class optimisePlanPage(ctk.CTkFrame):
             self.astar(self.startNode, self.evacPoint) # run the A* algorithm to find the path
             self.timeSlider.configure(state='normal') # the slider is enabled as the user can now run a simulation
             self.simulateEvent.configure(state='normal') # the simulate event button is enabled
+        elif self.evacPoint != -1:
+            self.startNodeWarning.place(x=300, y=250)
+        elif self.startNode != -1:
+            self.evacPointWarning.place(x=300, y=250)
+        else:
+            self.noSelectionWarning.place(x=300, y=250)
 
         self.enableAllButtons()
         self.setMinimumTime() # sets the minimum time on the slider
@@ -1305,15 +1318,20 @@ class optimisePlanPage(ctk.CTkFrame):
             self.timeSlider.configure(state='normal')
             self.simulateEvent.configure(state='normal')
             self.setMinimumTime()
+        else:
+            self.evacPointWarning.place(x=300, y=250)
         self.enableAllButtons()
         app.simulationRan = True
 
     def handleSimulateEventClick(self):
         self.disableAllButtons()
         self.simulateEvent.configure(text_color='white', fg_color='black')
-        for path in self.paths:
-            if app.capacityValues[path - 10] == -1:
+        print(f'self.paths: {self.paths}')
+        print(f'app.capacityValues: {app.capacityValues}')
+        for path in self.paths.keys():
+            if self.paths[path] and app.capacityValues[path - 10] == -1:
                 self.enableAllButtons()
+                self.capacityWarning.place(x=300, y=250)
                 return None
         self.newFlowSimulation() # runs the flow simulation algorithm
         self.enableAllButtons()
@@ -1489,13 +1507,13 @@ class Canvas(ctk.CTkCanvas):
                 colour = purple
             case 9:
                 colour = darkPurple
-            case 10:
+            case 20:
                 colour = warningRed
-            case 11:
+            case 21:
                 colour = warningOrange
-            case 12:
+            case 22:
                 colour = warningYellow
-            case 13:
+            case 23:
                 colour = warningGreen
             case _:
                 colour = purple
@@ -1554,10 +1572,14 @@ class Canvas(ctk.CTkCanvas):
                 if app.matrix[y][x]['base'] == 0 or app.matrix[y][x]['base'] > 1:
                     self.create_rectangle((self.pixelSize * (x+1) - self.pixelSize, self.pixelSize * (y+1) - self.pixelSize, self.pixelSize * (x+1) - 1, self.pixelSize * (y+1) - 1), fill=colour, outline=colour)
 
-class overwriteWarning(ctk.CTkFrame):
-    def __init__(self, parent):
+class warningWidget(ctk.CTkFrame):
+    def __init__(self, parent, message, confirmCommand=None, cancelCommand=None):
         super().__init__(parent)
         self.configure(height=200, width=400, corner_radius=15, border_color='black', border_width=5, bg_color='white', fg_color='white')
+        self.message = message
+        self.confirmCommand = confirmCommand
+        self.cancelCommand = cancelCommand
+        
         self.createWidgets()
         self.placeWidgets()
 
@@ -1572,9 +1594,10 @@ class overwriteWarning(ctk.CTkFrame):
         }
 
         # creating the widgets for the warning frame
-        self.warningLabel = ctk.CTkLabel(self, text='Are you sure you want to overwrite the data', text_color='black', font=('Excalifont',20))
-        self.confirmButton = ctk.CTkButton(self, text='Confirm', **warnButtonStyling, command=lambda: self.after(100, self.handleconfirmButtonClick))
-        self.cancelButton = ctk.CTkButton(self, text='Cancel', **warnButtonStyling, command=lambda: self.after(100, self.handlecancelButtonClick))
+        self.warningLabel = ctk.CTkLabel(self, text=self.message, text_color='black', font=('Excalifont',20))
+        self.buttonFrame = ctk.CTkFrame(self, fg_color='transparent')
+        self.confirmButton = ctk.CTkButton(self.buttonFrame, text='Confirm', **warnButtonStyling, command=lambda: self.after(100, self.handleconfirmButtonClick))
+        self.cancelButton = ctk.CTkButton(self.buttonFrame, text='Cancel', **warnButtonStyling, command=lambda: self.after(100, self.handlecancelButtonClick))
 
         # setting the hover behaviour for the buttons
         self.confirmButton.bind('<Enter>', lambda event: self.confirmButton.configure(text_color='white', fg_color='black'))
@@ -1584,16 +1607,20 @@ class overwriteWarning(ctk.CTkFrame):
 
     def placeWidgets(self):
         self.warningLabel.pack(padx=10, pady=(10,0))
-        self.confirmButton.pack(side='left', padx=(90,10), pady=10)
+        self.buttonFrame.pack(pady=(0,10), padx=10, anchor='center')
+        self.confirmButton.pack(side='left', padx=10, pady=10)
         self.cancelButton.pack(side='left', padx=10, pady=10)
 
     def handleconfirmButtonClick(self):
         self.confirmButton.configure(text_color='black', fg_color='white')
-        self.master.readFile() # calls the read file function on the parent frame if the user confirms they want to overwrite the data
+        if self.confirmCommand:
+            self.confirmCommand()
         self.place_forget() # hides the warning frame
 
     def handlecancelButtonClick(self):
         self.cancelButton.configure(text_color='black', fg_color='white')
+        if self.cancelCommand:
+            self.cancelCommand()
         self.place_forget() # hides the warning frame without overwriting the data
 
 class capacityDataInput(ctk.CTkFrame):
