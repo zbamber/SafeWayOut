@@ -757,9 +757,9 @@ class optimisePlanPage(ctk.CTkFrame):
         self.PEOPLE_PER_SECOND_PER_METRE = self.WALKING_PACE * self.PEOPLE_PER_METRE / self.DISTANCE_BETWEEN_PEOPLE
         self.MAX_HEIGHT = 79
         self.MAX_WIDTH = 119
-        self.SEVERE_THRESHOLD = 1
-        self.MODERATE_THRESHOLD = 1.2
-        self.MILD_THRESHOLD = 1.5
+        self.SEVERE_THRESHOLD = 0.9
+        self.MODERATE_THRESHOLD = 0.7
+        self.MILD_THRESHOLD = 0.5
 
 
         # creating and placing the widgets on the page
@@ -941,7 +941,7 @@ class optimisePlanPage(ctk.CTkFrame):
         while current in previousNodes:
             current = previousNodes[current]
             if current != start:
-                self.canvas.creation(current[0], current[1], startNode+10, False)
+                self.canvas.creation(current[0], current[1], startNode+14, False)
                 self.paths[startNode+10].append(current)
     
     def heuristic(self, point1, point2): # function to calculate the heuristic for the A* algorithm *explained in the report*
@@ -979,15 +979,14 @@ class optimisePlanPage(ctk.CTkFrame):
         return bottlenecks
 
     def measurePathWidth(self, position, pathID):
-        if self.checkVertical(position, pathID):
-            print('vertical')
-            return self.measureHorizontalWidth(position)
-        elif self.checkHorizontal(position, pathID):
-            print('horizontal')
+        corner = self.determineCornerType(position, pathID)
+
+        if corner:
+            return self.measureCornerWidth(position, pathID, corner)
+        elif not self.checkVertical(position, pathID):
             return self.measureVerticalWidth(position)
         else:
-            print('corner')
-            return self.measureCornerWidth(position, pathID)
+            return self.measureHorizontalWidth(position)
 
     def measureVerticalWidth(self, position):
         x, y = position
@@ -1019,10 +1018,8 @@ class optimisePlanPage(ctk.CTkFrame):
         
         return width
     
-    def measureCornerWidth(self, position, pathID):
+    def measureCornerWidth(self, position, pathID, cornerType):
         x, y = position
-
-        cornerType = self.determineCornerType(position, pathID)
 
         if not cornerType:
             print('Error determining corner type')
@@ -1049,12 +1046,12 @@ class optimisePlanPage(ctk.CTkFrame):
         while True:
             searchPosition = 0
             while searchPosition <= layer:
-                if self.isValidPosition(x + dx * layer, y + dy * position):
-                    if self.canvas.matrix[y + dy * position][x + dx * layer]['base'] == 0:
-                        return (x + dx * layer, y + dy * position)
-                elif self.isValidPosition(x + dx * position, y + dy * layer):
-                    if self.canvas.matrix[y + dy * layer][x + dx + position]['base'] == 0:
-                        return (x + dx * position, y + dy * layer)
+                if self.isValidPosition(x + dx * layer, y + dy * searchPosition):
+                    if self.canvas.matrix[y + dy * searchPosition][x + dx * layer]['base'] == 0:
+                        return (x + dx * layer, y + dy * searchPosition)
+                elif self.isValidPosition(x + dx * searchPosition, y + dy * layer):
+                    if self.canvas.matrix[y + dy * layer][x + dx + searchPosition]['base'] == 0:
+                        return (x + dx * searchPosition, y + dy * layer)
                 searchPosition += 1
             layer += 1
             if not self.isValidPosition(x + dx * layer, y + dy * layer):
@@ -1063,12 +1060,7 @@ class optimisePlanPage(ctk.CTkFrame):
     def determineCornerType(self, position, pathID):
         x, y = position
 
-        connections = {
-            'up': y < self.MAX_HEIGHT and pathID in self.canvas.matrix[y+1][x].get('paths', []),
-            'down': y < 0 and pathID in self.canvas.matrix[y-1][x].get('paths', []),
-            'right': x < self.MAX_WIDTH and pathID in self.canvas.matrix[y][x+1].get('paths', []),
-            'left': x < 0 and pathID in self.canvas.matrix[y][x-1].get('paths', [])
-        }
+        connections = self.checkConnections(position, pathID)
 
         if connections['up'] and connections['right']:
             return (-1,-1)
@@ -1097,79 +1089,46 @@ class optimisePlanPage(ctk.CTkFrame):
 
     def getSeverityColour(self, severity):
         if severity == 1:
-            return 2
+            return 10
         elif severity >= 0.7:
-            return 5
+            return 11
         elif severity >= 0.3:
-            return 7
+            return 12
         else:
-            return 4
+            return 13
         
 
     def isValidPosition(self, x, y):
         return 0 <= x <= self.MAX_WIDTH and 0 <= y <= self.MAX_HEIGHT
 
-    def checkVertical(self, position, path_id):
+    def checkVertical(self, position, pathID):
         x, y = position
-        
-        # Check for path connections above and below
-        has_path_above = y > 0 and path_id in self.canvas.matrix[y - 1][x].get('paths', [])
-        has_path_below = y < self.MAX_HEIGHT and path_id in self.canvas.matrix[y + 1][x].get('paths', [])
-        
-        # Check for path connections left and right to ensure it's not a corner/intersection
-        has_path_left = x > 0 and path_id in self.canvas.matrix[y][x - 1].get('paths', [])
-        has_path_right = x < self.MAX_WIDTH and path_id in self.canvas.matrix[y][x + 1].get('paths', [])
-        
-        # Debug output
-        print(f'y: {y}, x: {x}, above paths: {self.canvas.matrix[y-1][x].get("paths", []) if y > 0 else []}, '
-            f'below paths: {self.canvas.matrix[y+1][x].get("paths", []) if y < self.MAX_HEIGHT else []}')
-        
-        # Case 1: Connected on both sides (middle of line)
-        if has_path_above and has_path_below:
+        connections = self.checkConnections(position, pathID)
+
+        if connections['up'] and connections['down']:
             return True
-            
-        # Case 2: Connected only on one side (endpoint)
-        if (has_path_above or has_path_below) and not (has_path_left or has_path_right):
-            return True
-            
-        # Case 3: Special case for start/end nodes
-        if position == app.nodePositions[self.evacPoint] or position == app.nodePositions[self.startNode]:
-            if has_path_above or has_path_below:
-                return True
-        
-        print('not vertical')
+
         return False
 
-    def checkHorizontal(self, position, path_id):
+    def checkHorizontal(self, position, pathID):
         x, y = position
-        
-        # Check for path connections left and right
-        has_path_left = x > 0 and path_id in self.canvas.matrix[y][x - 1].get('paths', [])
-        has_path_right = x < self.MAX_WIDTH and path_id in self.canvas.matrix[y][x + 1].get('paths', [])
-        
-        # Check for path connections above and below to ensure it's not a corner/intersection
-        has_path_above = y > 0 and path_id in self.canvas.matrix[y - 1][x].get('paths', [])
-        has_path_below = y < self.MAX_HEIGHT and path_id in self.canvas.matrix[y + 1][x].get('paths', [])
-        
-        # Debug output
-        print(f'y: {y}, x: {x}, left paths: {self.canvas.matrix[y][x-1].get("paths", []) if x > 0 else []}, '
-            f'right paths: {self.canvas.matrix[y][x+1].get("paths", []) if x < self.MAX_WIDTH else []}')
-        
-        # Case 1: Connected on both sides (middle of line)
-        if has_path_left and has_path_right:
+        connections = self.checkConnections(position, pathID)
+
+        if connections['left'] and connections['right']:
             return True
-            
-        # Case 2: Connected only on one side (endpoint)
-        if (has_path_left or has_path_right) and not (has_path_above or has_path_below):
-            return True
-            
-        # Case 3: Special case for start/end nodes
-        if position == app.nodePositions[self.evacPoint] or position == app.nodePositions[self.startNode]:
-            if has_path_left or has_path_right:
-                return True
         
-        print('not horizontal')
         return False
+
+    def checkConnections(self, position, pathID):
+        x, y = position
+        connections = {
+            'up': y < self.MAX_HEIGHT and pathID in self.canvas.matrix[y+1][x].get('paths', []),
+            'down': y > 0 and pathID in self.canvas.matrix[y-1][x].get('paths', []),
+            'right': x < self.MAX_WIDTH and pathID in self.canvas.matrix[y][x+1].get('paths', []),
+            'left': x > 0 and pathID in self.canvas.matrix[y][x-1].get('paths', [])
+        }
+        return connections
+
 
     def calculateRequiredWidth(self, totalPeople):
         desiredFlow = totalPeople / self.timeSlider.get()
@@ -1352,6 +1311,10 @@ class optimisePlanPage(ctk.CTkFrame):
     def handleSimulateEventClick(self):
         self.disableAllButtons()
         self.simulateEvent.configure(text_color='white', fg_color='black')
+        for path in self.paths:
+            if app.capacityValues[path - 10] == -1:
+                self.enableAllButtons()
+                return None
         self.newFlowSimulation() # runs the flow simulation algorithm
         self.enableAllButtons()
 
@@ -1499,6 +1462,12 @@ class Canvas(ctk.CTkCanvas):
         purple = '#800080'
         darkPurple = '#320032'
 
+        # warning colours
+        warningRed = '#ff0000'
+        warningOrange = '#ff6b00'
+        warningYellow = '#ffd700'
+        warningGreen = '#90ee90'
+
         match colourValue: # setting the colour based on the colour value passed in so we can reuse the function for different colours
             case 0:
                 colour = 'black'
@@ -1520,6 +1489,14 @@ class Canvas(ctk.CTkCanvas):
                 colour = purple
             case 9:
                 colour = darkPurple
+            case 10:
+                colour = warningRed
+            case 11:
+                colour = warningOrange
+            case 12:
+                colour = warningYellow
+            case 13:
+                colour = warningGreen
             case _:
                 colour = purple
 
