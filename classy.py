@@ -755,7 +755,13 @@ class optimisePlanPage(ctk.CTkFrame):
         self.DISTANCE_BETWEEN_PEOPLE = 0.6
         self.PEOPLE_PER_METRE = 2
         self.PEOPLE_PER_SECOND_PER_METRE = self.WALKING_PACE * self.PEOPLE_PER_METRE / self.DISTANCE_BETWEEN_PEOPLE
-        
+        self.MAX_HEIGHT = 79
+        self.MAX_WIDTH = 119
+        self.SEVERE_THRESHOLD = 1
+        self.MODERATE_THRESHOLD = 1.2
+        self.MILD_THRESHOLD = 1.5
+
+
         # creating and placing the widgets on the page
         self.createWidgets()
         self.setButtonImages()
@@ -900,11 +906,11 @@ class optimisePlanPage(ctk.CTkFrame):
                 app.matrix = copy.deepcopy(self.canvas.matrix)
                 return True
 
-            if current[1] < 79 and self.canvas.matrix[current[1] + 1][current[0]]['base'] != 0:
+            if current[1] < self.MAX_HEIGHT and self.canvas.matrix[current[1] + 1][current[0]]['base'] != 0:
                 neighbors.append((current[0], current[1] + 1))
             if current[1] > 0 and self.canvas.matrix[current[1] - 1][current[0]]['base'] != 0:
                 neighbors.append((current[0], current[1] - 1))
-            if current[0] < 119 and self.canvas.matrix[current[1]][current[0] + 1]['base'] != 0:
+            if current[0] < self.MAX_WIDTH and self.canvas.matrix[current[1]][current[0] + 1]['base'] != 0:
                 neighbors.append((current[0] + 1, current[1]))
             if current[0] > 0 and self.canvas.matrix[current[1]][current[0] - 1]['base'] != 0:
                 neighbors.append((current[0] - 1, current[1]))
@@ -943,203 +949,378 @@ class optimisePlanPage(ctk.CTkFrame):
         x2, y2 = point2
         return abs(x1 - x2) + abs(y1 - y2)
 
-    def runFlowSimulation(self): # function to run the flow simulation algorithm *explained in the report*
+    def newFlowSimulation(self): # function to run the flow simulation algorithm *explained in the report*
         problems = []
-        pathWidths = []
-        for path in self.paths.keys():
-            if self.paths[path]:
-                for position in self.paths[path]:
-                    pathWidth = 1
-                    if position[1] < 79 and path not in self.canvas.matrix[position[1] + 1][position[0]].get('paths', []) and position[1] > 0 and path not in self.canvas.matrix[position[1] - 1][position[0]].get('paths', []): # path is horizontal
-                        tempCount  = 0
-                        while tempCount < app.capacityValues[path - 10] / self.PEOPLE_PER_SECOND_PER_METRE:
-                            if position[1] + tempCount < 79 and self.canvas.matrix[position[1] + tempCount + 1][position[0]]['base'] != 0:
-                                tempCount += 1
-                            else:
-                                pathWidth += tempCount
-                                break
-                        else:
-                            pathWidth += tempCount
-                        tempCount  = 0
-                        while tempCount < app.capacityValues[path - 10] / self.PEOPLE_PER_SECOND_PER_METRE:
-                            if position[1] - tempCount > 0 and self.canvas.matrix[position[1] - tempCount - 1][position[0]]['base'] != 0:
-                                tempCount += 1
-                            else:
-                                pathWidth += tempCount
-                                break
-                        else:
-                            pathWidth += tempCount
-                    elif position[0] < 119 and path not in self.canvas.matrix[position[1]][position[0] + 1].get('paths', []) and position[0] > 0 and path not in self.canvas.matrix[position[1]][position[0] - 1].get('paths', []): # path vertical
-                        tempCount  = 0
-                        while tempCount < app.capacityValues[path - 10] / self.PEOPLE_PER_SECOND_PER_METRE:
-                            if position[0] + tempCount < 119 and self.canvas.matrix[position[1]][position[0] + tempCount + 1]['base'] != 0:
-                                tempCount += 1
-                            else:
-                                pathWidth += tempCount
-                                break
-                        else:
-                            pathWidth += tempCount
-                        tempCount  = 0
-                        while tempCount < app.capacityValues[path - 10] / self.PEOPLE_PER_SECOND_PER_METRE:
-                            if position[0] - tempCount > 0 and self.canvas.matrix[position[1]][position[0] - tempCount - 1]['base'] != 0:
-                                tempCount += 1
-                            else:
-                                pathWidth += tempCount
-                                break
-                        else:
-                            pathWidth += tempCount
-                    elif position[1] < 79 and path not in self.canvas.matrix[position[1] + 1][position[0]].get('paths', []) and position[0] < 119 and path not in self.canvas.matrix[position[1]][position[0] + 1].get('paths', []):
-                        outsideWall = self.findNearestWall(position, (1, 1))
-                        if 0 <= position[0] - 1 <= 119 and 0 <= position[1] - 1 <= 79:
-                            if self.canvas.matrix[position[1] - 1][position[0] - 1]['base'] == 0:
-                                insideWall = (position[0] - 1, position[1] - 1)
-                            else:
-                                insideWall = self.findNearestWall((position[0] - 1, position[1] - 1), (-1, -1))
-                        else:
-                            insideWall = (position[0] - 1, position[1] - 1)
-                        pathWidth  = self.calculateDistance(outsideWall, insideWall)
+        for pathID, pathPositions in self.paths.items():
+            if pathPositions:
+                pathAnalysis = self.analysePath(pathID, pathPositions)
+                problems.extend(pathAnalysis)
+        return self.markProblems(problems)
 
-                    elif position[1] < 79 and path not in self.canvas.matrix[position[1] + 1][position[0]].get('paths', []) and position[0] > 0 and path not in self.canvas.matrix[position[1]][position[0] - 1].get('paths', []):
-                        outsideWall = self.findNearestWall(position, (-1, 1))
-                        if 0 <= position[0] + 1 <= 119 and 0 <= position[1] - 1 <= 79:
-                            if self.canvas.matrix[position[1] - 1][position[0] + 1]['base'] == 0:
-                                insideWall = (position[0] + 1, position[1] - 1)
-                            else:
-                                insideWall = self.findNearestWall((position[0] + 1, position[1] - 1), (1, -1))
-                        else:
-                            insideWall = (position[0] + 1, position[1] - 1)
-                        pathWidth  = self.calculateDistance(outsideWall, insideWall)
+    def analysePath(self, pathID, pathPositions):
+        pathProblems = []
 
-                    elif position[1] > 0 and path not in self.canvas.matrix[position[1] - 1][position[0]].get('paths', []) and position[0] < 119 and path not in self.canvas.matrix[position[1]][position[0] + 1].get('paths', []):
-                        outsideWall = self.findNearestWall(position, (1, -1))
-                        if 0 <= position[0] - 1 <= 119 and 0 <= position[1] + 1 <= 79:
-                            if self.canvas.matrix[position[1] + 1][position[0] - 1]['base'] == 0:
-                                insideWall = (position[0] - 1, position[1] + 1)
-                            else:
-                                insideWall = self.findNearestWall((position[0] - 1, position[1] + 1), (-1, 1))
-                        else:
-                            insideWall = (position[0] - 1, position[1] + 1)
-                        pathWidth  = self.calculateDistance(outsideWall, insideWall)
+        for position in pathPositions:
+            totalPeople = self.calculatePositionCapacity(position)
+            minWidth = self.calculateRequiredWidth(totalPeople)
+            width = self.measurePathWidth(position, pathID)
+            severity = self.assessSeverity(width, minWidth)
+            pathProblems.append((position, width, severity))
 
-                    elif position[1] > 0 and path not in self.canvas.matrix[position[1] - 1][position[0]].get('paths', []) and position[0] > 0 and path not in self.canvas.matrix[position[1]][position[0] - 1].get('paths', []):
-                        outsideWall = self.findNearestWall(position, (-1, -1))
-                        if 0 <= position[0] + 1 <= 119 and 0 <= position[1] + 1 <= 79:
-                            if self.canvas.matrix[position[1] + 1][position[0] + 1]['base'] == 0:
-                                insideWall = (position[0] + 1, position[1] + 1)
-                            else:
-                                insideWall = self.findNearestWall((position[0] + 1, position[1] + 1), (1, 1))
-                        else:
-                            insideWall = (position[0] + 1, position[1] + 1)
-                        pathWidth  = self.calculateDistance(outsideWall, insideWall)
+        return pathProblems
 
-                    people = 0
+    def markProblems(self, problems):
+        bottlenecks = []
+        for pos, width, severity in problems:
+            if severity > 0:
+                colour = self.getSeverityColour(severity)
+                self.canvas.creation(pos[0], pos[1], colour, False)
+                bottlenecks.append((pos, width, severity))
+        return bottlenecks
 
-                    for group in self.canvas.matrix[position[1]][position[0]].get('paths', []):
-                        people += app.capacityValues[group - 10]
-                        
-                    pathWidths.append((position, pathWidth))
-
-                desiredFlow = people / self.timeSlider.get()
-                minWidth = desiredFlow / self.PEOPLE_PER_SECOND_PER_METRE
-
-                pathWidths.sort(key=lambda element: element[1] / minWidth)
-
-                counter = 0
-                previous = -1
-
-                for position in pathWidths:
-                    if counter > 20 and position[1] != previous:
-                        break
-                    if position[1] < minWidth:
-                        problems.append(position)
-                        self.canvas.creation(position[0][0], position[0][1], 2, False)
-                    else:
-                        problems.append(position)
-                        self.canvas.creation(position[0][0], position[0][1], 5, False)
-                    counter += 1
-                    previous = position[1]
-
-    def findNearestWall(self, corner, direction): # function to find the nearest wall to a given position *explained in the report*
-        nearestWall = (-1,-1)
-        layer = 1
-        while nearestWall == (-1,-1):
-            position = 0
-            while position <= layer:
-                if 0 <= corner[1] + direction[1] * position <= 79 and 0 <= corner[0] + direction[0] * layer <= 119 and self.canvas.matrix[corner[1] + direction[1] * position][corner[0] + direction[0] * layer]['base'] == 0:
-                    nearestWall = (corner[0] + direction[0] * layer, corner[1] + direction[1] * position)
-                    break
-                elif 0 <= corner[1] + direction[1] * layer <= 79 and 0 <= corner[0] + direction[0] * position <= 119 and self.canvas.matrix[corner[1] + direction[1] * layer][corner[0] + direction[0] * position]['base'] == 0:
-                    nearestWall = (corner[0] + direction[0] * position, corner[1] + direction[1] * layer)
-                    break
-                position += 1
-            if not (0 <= corner[1] + direction[1] * layer <= 79) and not (0 <= corner[0] + direction[0] * layer <= 119):
-                break
-            layer += 1
-        return nearestWall
-
-    def calculateDistance(self, corner, wall): # calculates the distance between the passed in coordinates for corner and wall
-        return math.sqrt(abs(corner[0]-wall[0]) ** 2 + abs(corner[1]-wall[1]) ** 2)
-    
-    def drawLine(self, start, end): # function to draw a line between two points *explained in the report*
-        tempPixels = []
-        if abs(end[0] - start[0]) > abs(end[1] - start[1]):
-            tempPixels = self.drawHorizontalLine(start[0], start[1], end[0], end[1])
+    def measurePathWidth(self, position, pathID):
+        if self.checkVertical(position, pathID):
+            print('vertical')
+            return self.measureHorizontalWidth(position)
+        elif self.checkHorizontal(position, pathID):
+            print('horizontal')
+            return self.measureVerticalWidth(position)
         else:
-            tempPixles = self.drawVerticalLine(start[0], start[1], end[0], end[1])
-        return tempPixels
+            print('corner')
+            return self.measureCornerWidth(position, pathID)
+
+    def measureVerticalWidth(self, position):
+        x, y = position
+        width = 1
+
+        for direction in [-1, 1]:
+            offset = 0
+            while True:
+                newY = y + (offset + 1) * direction
+                if not self.isValidPosition(x, newY) or self.canvas.matrix[newY][x]['base'] == 0:
+                    break
+                width += 1
+                offset += 1
+
+        return width
     
-    def drawHorizontalLine(self, x0, y0, x1, y1): # Bresenhams line algorithm *explained in the report*
-        tempPixels = []
-        if x0 > x1:
-            x0 , x1 = x1 , x0
-            y0 , y1 = y1 , y0
+    def measureHorizontalWidth(self, position):
+        x, y = position
+        width = 1
+
+        for direction in [-1, 1]:
+            offset = 0
+            while True:
+                newX = x + (offset + 1) * direction
+                if not self.isValidPosition(newX, y) or self.canvas.matrix[y][newX]['base'] == 0:
+                    break
+                width += 1
+                offset += 1
         
-        dx = x1 - x0
-        dy = y1 - y0
+        return width
+    
+    def measureCornerWidth(self, position, pathID):
+        x, y = position
 
-        direction = -1 if dy < 0 else 1
-        dy *= direction
+        cornerType = self.determineCornerType(position, pathID)
 
-        if dx != 0:
-            y = y0
-            p = 2 * dy - dx
-            for i in range(dx + 1):
-                if i != 0 and y != y0 and x0 + i != x1 and y != y1:
-                    pixelID = self.canvas.creation(x0 + i, y, 6, True)
-                    tempPixels.append(pixelID)
-                if p >= 0:
-                    y += direction
-                    p = p - 2 * dx
-                p = p + 2 * dy
+        if not cornerType:
+            print('Error determining corner type')
         
-        return tempPixels
+        outerWall = self.findNearestWall(position, cornerType)
+        innerDX, innerDY = -cornerType[0], -cornerType[1]
+        innerStart = (x + innerDX, y + innerDY)
 
-    def drawVerticalLine(self, x0, y0, x1, y1): # Bresenhams line algorithm *explained in the report*
-        tempPixels = []
-        if y0 > y1:
-            x0 , x1 = x1 , x0
-            y0 , y1 = y1 , y0
+        if self.isValidPosition(innerStart[0], innerStart[1]):
+            if self.canvas.matrix[innerStart[1]][innerStart[0]]['base'] == 0:
+                innerWall = innerStart
+            else:
+                innerWall = self.findNearestWall(innerStart, (innerDX, innerDY))
+        else:
+            innerWall = innerStart
+
+        return round(math.sqrt(abs(innerWall[0] - outerWall[0]) ** 2 + abs(innerWall[1] - outerWall[1]) ** 2))
+
+    def findNearestWall(self, position, direction):
+        x, y = position
+        dx, dy = direction
         
-        dx = x1 - x0
-        dy = y1 - y0
+        layer = 1
+        while True:
+            searchPosition = 0
+            while searchPosition <= layer:
+                if self.isValidPosition(x + dx * layer, y + dy * position):
+                    if self.canvas.matrix[y + dy * position][x + dx * layer]['base'] == 0:
+                        return (x + dx * layer, y + dy * position)
+                elif self.isValidPosition(x + dx * position, y + dy * layer):
+                    if self.canvas.matrix[y + dy * layer][x + dx + position]['base'] == 0:
+                        return (x + dx * position, y + dy * layer)
+                searchPosition += 1
+            layer += 1
+            if not self.isValidPosition(x + dx * layer, y + dy * layer):
+                return (x + dx * (layer - 1), y + dy * (layer - 1))
 
-        direction = -1 if dx < 0 else 1
-        dx *= direction
+    def determineCornerType(self, position, pathID):
+        x, y = position
 
-        if dy != 0:
-            x = x0
-            p = 2 * dx - dy
-            for i in range(dy + 1):
-                if x != x0 and i != 0 and x != x1 and y0 + i != y1:
-                    pixelID = self.canvas.creation(x, y0 + i, 6, True)
-                    tempPixels.append(pixelID)
-                if p >= 0:
-                    x += direction
-                    p = p - 2 * dy
-                p = p + 2 * dx
+        connections = {
+            'up': y < self.MAX_HEIGHT and pathID in self.canvas.matrix[y+1][x].get('paths', []),
+            'down': y < 0 and pathID in self.canvas.matrix[y-1][x].get('paths', []),
+            'right': x < self.MAX_WIDTH and pathID in self.canvas.matrix[y][x+1].get('paths', []),
+            'left': x < 0 and pathID in self.canvas.matrix[y][x-1].get('paths', [])
+        }
+
+        if connections['up'] and connections['right']:
+            return (-1,-1)
+        elif connections['up'] and connections['left']:
+            return (1,-1)
+        elif connections['down'] and connections['right']:
+            return (-1,1)
+        elif connections['down'] and connections['left']:
+            return (1,1)
+
+        return None
+
+    def assessSeverity(self, width, minWidth):
+        widthRatio = minWidth / width
+        if widthRatio >= self.SEVERE_THRESHOLD:
+            return 1
+        elif widthRatio >= self.MODERATE_THRESHOLD:
+            severity = 0.7 + (0.29 * (widthRatio - self.MODERATE_THRESHOLD) / (self.SEVERE_THRESHOLD - self.MODERATE_THRESHOLD))
+            return severity
+        elif widthRatio >= self.MILD_THRESHOLD:
+            severity = 0.3 + (0.4 * (widthRatio - self.MILD_THRESHOLD) / (self.MODERATE_THRESHOLD - self.MILD_THRESHOLD))
+            return severity
+        else:
+            severity = 0.3 * (widthRatio / self.MILD_THRESHOLD)
+            return severity
+
+    def getSeverityColour(self, severity):
+        if severity == 1:
+            return 2
+        elif severity >= 0.7:
+            return 5
+        elif severity >= 0.3:
+            return 7
+        else:
+            return 4
         
-        return tempPixels
 
+    def isValidPosition(self, x, y):
+        return 0 <= x <= self.MAX_WIDTH and 0 <= y <= self.MAX_HEIGHT
+
+    def checkVertical(self, position, path_id):
+        x, y = position
+        
+        # Check for path connections above and below
+        has_path_above = y > 0 and path_id in self.canvas.matrix[y - 1][x].get('paths', [])
+        has_path_below = y < self.MAX_HEIGHT and path_id in self.canvas.matrix[y + 1][x].get('paths', [])
+        
+        # Check for path connections left and right to ensure it's not a corner/intersection
+        has_path_left = x > 0 and path_id in self.canvas.matrix[y][x - 1].get('paths', [])
+        has_path_right = x < self.MAX_WIDTH and path_id in self.canvas.matrix[y][x + 1].get('paths', [])
+        
+        # Debug output
+        print(f'y: {y}, x: {x}, above paths: {self.canvas.matrix[y-1][x].get("paths", []) if y > 0 else []}, '
+            f'below paths: {self.canvas.matrix[y+1][x].get("paths", []) if y < self.MAX_HEIGHT else []}')
+        
+        # Case 1: Connected on both sides (middle of line)
+        if has_path_above and has_path_below:
+            return True
+            
+        # Case 2: Connected only on one side (endpoint)
+        if (has_path_above or has_path_below) and not (has_path_left or has_path_right):
+            return True
+            
+        # Case 3: Special case for start/end nodes
+        if position == app.nodePositions[self.evacPoint] or position == app.nodePositions[self.startNode]:
+            if has_path_above or has_path_below:
+                return True
+        
+        print('not vertical')
+        return False
+
+    def checkHorizontal(self, position, path_id):
+        x, y = position
+        
+        # Check for path connections left and right
+        has_path_left = x > 0 and path_id in self.canvas.matrix[y][x - 1].get('paths', [])
+        has_path_right = x < self.MAX_WIDTH and path_id in self.canvas.matrix[y][x + 1].get('paths', [])
+        
+        # Check for path connections above and below to ensure it's not a corner/intersection
+        has_path_above = y > 0 and path_id in self.canvas.matrix[y - 1][x].get('paths', [])
+        has_path_below = y < self.MAX_HEIGHT and path_id in self.canvas.matrix[y + 1][x].get('paths', [])
+        
+        # Debug output
+        print(f'y: {y}, x: {x}, left paths: {self.canvas.matrix[y][x-1].get("paths", []) if x > 0 else []}, '
+            f'right paths: {self.canvas.matrix[y][x+1].get("paths", []) if x < self.MAX_WIDTH else []}')
+        
+        # Case 1: Connected on both sides (middle of line)
+        if has_path_left and has_path_right:
+            return True
+            
+        # Case 2: Connected only on one side (endpoint)
+        if (has_path_left or has_path_right) and not (has_path_above or has_path_below):
+            return True
+            
+        # Case 3: Special case for start/end nodes
+        if position == app.nodePositions[self.evacPoint] or position == app.nodePositions[self.startNode]:
+            if has_path_left or has_path_right:
+                return True
+        
+        print('not horizontal')
+        return False
+
+    def calculateRequiredWidth(self, totalPeople):
+        desiredFlow = totalPeople / self.timeSlider.get()
+        return desiredFlow / self.PEOPLE_PER_SECOND_PER_METRE
+
+    def calculatePositionCapacity(self, position):
+        totalPeople = 0
+        x, y = position
+
+        for pathID in self.canvas.matrix[y][x].get('paths', []):
+            totalPeople += app.capacityValues[pathID - 10]
+
+        return totalPeople
+
+    # def runFlowSimulation(self): # function to run the flow simulation algorithm *explained in the report*
+    #     problems = []
+    #     pathWidths = []
+    #     for path in self.paths.keys():
+    #         if self.paths[path]:
+    #             for position in self.paths[path]:
+    #                 pathWidth = 1
+    #                 if position[1] < 79 and path not in self.canvas.matrix[position[1] + 1][position[0]].get('paths', []) and position[1] > 0 and path not in self.canvas.matrix[position[1] - 1][position[0]].get('paths', []): # path is horizontal
+    #                     tempCount  = 0
+    #                     while tempCount < app.capacityValues[path - 10] / self.PEOPLE_PER_SECOND_PER_METRE:
+    #                         if position[1] + tempCount < 79 and self.canvas.matrix[position[1] + tempCount + 1][position[0]]['base'] != 0:
+    #                             tempCount += 1
+    #                         else:
+    #                             pathWidth += tempCount
+    #                             break
+    #                     else:
+    #                         pathWidth += tempCount
+    #                     tempCount  = 0
+    #                     while tempCount < app.capacityValues[path - 10] / self.PEOPLE_PER_SECOND_PER_METRE:
+    #                         if position[1] - tempCount > 0 and self.canvas.matrix[position[1] - tempCount - 1][position[0]]['base'] != 0:
+    #                             tempCount += 1
+    #                         else:
+    #                             pathWidth += tempCount
+    #                             break
+    #                     else:
+    #                         pathWidth += tempCount
+    #                 elif position[0] < 119 and path not in self.canvas.matrix[position[1]][position[0] + 1].get('paths', []) and position[0] > 0 and path not in self.canvas.matrix[position[1]][position[0] - 1].get('paths', []): # path vertical
+    #                     tempCount  = 0
+    #                     while tempCount < app.capacityValues[path - 10] / self.PEOPLE_PER_SECOND_PER_METRE:
+    #                         if position[0] + tempCount < 119 and self.canvas.matrix[position[1]][position[0] + tempCount + 1]['base'] != 0:
+    #                             tempCount += 1
+    #                         else:
+    #                             pathWidth += tempCount
+    #                             break
+    #                     else:
+    #                         pathWidth += tempCount
+    #                     tempCount  = 0
+    #                     while tempCount < app.capacityValues[path - 10] / self.PEOPLE_PER_SECOND_PER_METRE:
+    #                         if position[0] - tempCount > 0 and self.canvas.matrix[position[1]][position[0] - tempCount - 1]['base'] != 0:
+    #                             tempCount += 1
+    #                         else:
+    #                             pathWidth += tempCount
+    #                             break
+    #                     else:
+    #                         pathWidth += tempCount
+    #                 elif position[1] < 79 and path not in self.canvas.matrix[position[1] + 1][position[0]].get('paths', []) and position[0] < 119 and path not in self.canvas.matrix[position[1]][position[0] + 1].get('paths', []):
+    #                     outsideWall = self.findNearestWall(position, (1, 1))
+    #                     if 0 <= position[0] - 1 <= 119 and 0 <= position[1] - 1 <= 79:
+    #                         if self.canvas.matrix[position[1] - 1][position[0] - 1]['base'] == 0:
+    #                             insideWall = (position[0] - 1, position[1] - 1)
+    #                         else:
+    #                             insideWall = self.findNearestWall((position[0] - 1, position[1] - 1), (-1, -1))
+    #                     else:
+    #                         insideWall = (position[0] - 1, position[1] - 1)
+    #                     pathWidth  = self.calculateDistance(outsideWall, insideWall)
+
+    #                 elif position[1] < 79 and path not in self.canvas.matrix[position[1] + 1][position[0]].get('paths', []) and position[0] > 0 and path not in self.canvas.matrix[position[1]][position[0] - 1].get('paths', []):
+    #                     outsideWall = self.findNearestWall(position, (-1, 1))
+    #                     if 0 <= position[0] + 1 <= 119 and 0 <= position[1] - 1 <= 79:
+    #                         if self.canvas.matrix[position[1] - 1][position[0] + 1]['base'] == 0:
+    #                             insideWall = (position[0] + 1, position[1] - 1)
+    #                         else:
+    #                             insideWall = self.findNearestWall((position[0] + 1, position[1] - 1), (1, -1))
+    #                     else:
+    #                         insideWall = (position[0] + 1, position[1] - 1)
+    #                     pathWidth  = self.calculateDistance(outsideWall, insideWall)
+
+    #                 elif position[1] > 0 and path not in self.canvas.matrix[position[1] - 1][position[0]].get('paths', []) and position[0] < 119 and path not in self.canvas.matrix[position[1]][position[0] + 1].get('paths', []):
+    #                     outsideWall = self.findNearestWall(position, (1, -1))
+    #                     if 0 <= position[0] - 1 <= 119 and 0 <= position[1] + 1 <= 79:
+    #                         if self.canvas.matrix[position[1] + 1][position[0] - 1]['base'] == 0:
+    #                             insideWall = (position[0] - 1, position[1] + 1)
+    #                         else:
+    #                             insideWall = self.findNearestWall((position[0] - 1, position[1] + 1), (-1, 1))
+    #                     else:
+    #                         insideWall = (position[0] - 1, position[1] + 1)
+    #                     pathWidth  = self.calculateDistance(outsideWall, insideWall)
+
+    #                 elif position[1] > 0 and path not in self.canvas.matrix[position[1] - 1][position[0]].get('paths', []) and position[0] > 0 and path not in self.canvas.matrix[position[1]][position[0] - 1].get('paths', []):
+    #                     outsideWall = self.findNearestWall(position, (-1, -1))
+    #                     if 0 <= position[0] + 1 <= 119 and 0 <= position[1] + 1 <= 79:
+    #                         if self.canvas.matrix[position[1] + 1][position[0] + 1]['base'] == 0:
+    #                             insideWall = (position[0] + 1, position[1] + 1)
+    #                         else:
+    #                             insideWall = self.findNearestWall((position[0] + 1, position[1] + 1), (1, 1))
+    #                     else:
+    #                         insideWall = (position[0] + 1, position[1] + 1)
+    #                     pathWidth  = self.calculateDistance(outsideWall, insideWall)
+
+    #                 people = 0
+
+    #                 for group in self.canvas.matrix[position[1]][position[0]].get('paths', []):
+    #                     people += app.capacityValues[group - 10]
+                        
+    #                 pathWidths.append((position, pathWidth))
+
+    #             desiredFlow = people / self.timeSlider.get()
+    #             minWidth = desiredFlow / self.PEOPLE_PER_SECOND_PER_METRE
+
+    #             pathWidths.sort(key=lambda element: element[1] / minWidth)
+
+    #             counter = 0
+    #             previous = -1
+
+    #             for position in pathWidths:
+    #                 if counter > 20 and position[1] != previous:
+    #                     break
+    #                 if position[1] < minWidth:
+    #                     problems.append(position)
+    #                     self.canvas.creation(position[0][0], position[0][1], 2, False)
+    #                 else:
+    #                     problems.append(position)
+    #                     self.canvas.creation(position[0][0], position[0][1], 5, False)
+    #                 counter += 1
+    #                 previous = position[1]
+
+    # def findNearestWall(self, corner, direction): # function to find the nearest wall to a given position *explained in the report*
+    #     nearestWall = (-1,-1)
+    #     layer = 1
+    #     while nearestWall == (-1,-1):
+    #         position = 0
+    #         while position <= layer:
+    #             if 0 <= corner[1] + direction[1] * position <= 79 and 0 <= corner[0] + direction[0] * layer <= 119 and self.canvas.matrix[corner[1] + direction[1] * position][corner[0] + direction[0] * layer]['base'] == 0:
+    #                 nearestWall = (corner[0] + direction[0] * layer, corner[1] + direction[1] * position)
+    #                 break
+    #             elif 0 <= corner[1] + direction[1] * layer <= 79 and 0 <= corner[0] + direction[0] * position <= 119 and self.canvas.matrix[corner[1] + direction[1] * layer][corner[0] + direction[0] * position]['base'] == 0:
+    #                 nearestWall = (corner[0] + direction[0] * position, corner[1] + direction[1] * layer)
+    #                 break
+    #             position += 1
+    #         if not (0 <= corner[1] + direction[1] * layer <= 79) and not (0 <= corner[0] + direction[0] * layer <= 119):
+    #             break
+    #         layer += 1
+    #     return nearestWall
+
+    # def calculateDistance(self, corner, wall): # calculates the distance between the passed in coordinates for corner and wall
+    #     return math.sqrt(abs(corner[0]-wall[0]) ** 2 + abs(corner[1]-wall[1]) ** 2)
+    
     def handleRunButtonClick(self): # called when the search is run for one path
         self.runButton.configure(text_color='black', fg_color='white')
         self.disableAllButtons()
@@ -1171,7 +1352,7 @@ class optimisePlanPage(ctk.CTkFrame):
     def handleSimulateEventClick(self):
         self.disableAllButtons()
         self.simulateEvent.configure(text_color='white', fg_color='black')
-        self.runFlowSimulation() # runs the flow simulation algorithm
+        self.newFlowSimulation() # runs the flow simulation algorithm
         self.enableAllButtons()
 
     def handleEvacPointClick(self):
