@@ -34,6 +34,14 @@ class App(tk.Tk):
         self.matrix = [[{'base': 1} for _ in range(120)] for _ in range(80)]
         self.nodePositions = {2:(-1,-1), 3:(-1,-1), 4:(-1,-1), 5:(-1,-1), 6:(-1,-1), 7:(-1,-1)}
         self.capacityValues={2:-1,3:-1,4:-1,5:-1,6:-1,7:-1}
+        self.paths = {
+            12:[],
+            13:[],
+            14:[],
+            15:[],
+            16:[],
+            17:[]
+        }
         self.dataAdded = ctk.BooleanVar(value=False)
         self.pathsFound = False
         self.bottlenecksFound = False
@@ -108,11 +116,12 @@ class Menu(ctk.CTkFrame):
 
     def openInputDataPage(self):
         self.master.showPage(self.master.inputDataPage) # calls the method in the app class to show the input data page
+        self.master.inputDataPage.canvas.display(True)
         self.after(100, lambda: self.inputDataButton.configure(text_color='black', fg_color='white')) # returns the button to its original state after 100ms
 
     def openOptimisePlanPage(self):
         self.master.showPage(self.master.optimisePlanPage) # calls the method in the app class to show the optimise plan page
-        self.master.optimisePlanPage.canvas.display() # refreshes the canvas to show any changes made to the plan
+        self.master.optimisePlanPage.canvas.display(True) # refreshes the canvas to show any changes made to the plan
         self.after(100, lambda: self.optimisePlanButton.configure(text_color='black', fg_color='white'))
 
 class homePage(ctk.CTkFrame):
@@ -207,7 +216,7 @@ class homePage(ctk.CTkFrame):
         # also sets the checkbox to the correct state
         if self.master.dataAdded.get() == True:
             self.noData = False
-            self.canvas.display()
+            self.canvas.display(True)
             self.sitePlanCheckBox.select()
         else:
             self.noData = True
@@ -237,7 +246,6 @@ class homePage(ctk.CTkFrame):
         else:
             self.analyseCheckBox.deselect()
 
-        print(app.capacityValues)
         for capacity in app.capacityValues.values():
             if capacity > 0:
                 self.capacityDataCheckBox.select()
@@ -675,6 +683,9 @@ class inputDataPage(ctk.CTkFrame):
         for node in app.capacityValues.keys():
             app.capacityValues[node] = -1
 
+        for path in app.paths.keys():
+            app.paths[path] = []
+
         # if the bullseye button was disabled it will be re-enabled
         self.bullseyeButton.configure(state='normal')
         self.planInserted = False # the planInserted boolean is set to false to indicate no data has been added
@@ -723,7 +734,7 @@ class inputDataPage(ctk.CTkFrame):
             self.canvas.matrix = json.load(file) # loads the matrix from the file into the input data page matrix
             self.master.dataAdded.set(True) # sets the dataAdded boolean to true to indicate data has been added
             self.master.matrix = copy.deepcopy(self.canvas.matrix) # copies the matrix from the input data page to the app wide matrix
-            self.canvas.display() # displays the data from the file on the canvas
+            self.canvas.display(True) # displays the data from the file on the canvas
             self.planInserted = True
 
     def noNodesLeft(self): # function to disable the bullseye button when there are no nodes left
@@ -760,14 +771,6 @@ class optimisePlanPage(ctk.CTkFrame):
         self.evacPoint = -1
         self.startNode = -1
         self.nodeChooserOpen = False
-        self.paths = {
-            12:[],
-            13:[],
-            14:[],
-            15:[],
-            16:[],
-            17:[]
-        }
 
         # the following constants are used in the flow simulation algorithm
         self.WALKING_PACE = 1.4
@@ -896,7 +899,7 @@ class optimisePlanPage(ctk.CTkFrame):
         button.pack_configure(pady=2)
 
     def astar(self, startNode, endNode): # A* algorithm *will be explained in the report*
-        self.master.optimisePlanPage.canvas.matrix = copy.deepcopy(self.master.matrix)
+        self.canvas.matrix = copy.deepcopy(self.master.matrix)
         tempSquareIDs = []
         start = app.nodePositions[startNode]
         end = app.nodePositions[endNode]
@@ -966,7 +969,7 @@ class optimisePlanPage(ctk.CTkFrame):
             current = previousNodes[current]
             if current != start:
                 self.canvas.creation(current[0], current[1], startNode+10, False)
-                self.paths[startNode+10].append(current)
+                app.paths[startNode+10].append(current)
     
     def heuristic(self, point1, point2): # function to calculate the heuristic for the A* algorithm *explained in the report*
         x1, y1 = point1
@@ -975,7 +978,7 @@ class optimisePlanPage(ctk.CTkFrame):
 
     def newFlowSimulation(self): # function to run the flow simulation algorithm *explained in the report*
         problems = []
-        for pathID, pathPositions in self.paths.items():
+        for pathID, pathPositions in app.paths.items():
             if pathPositions:
                 pathAnalysis = self.analysePath(pathID, pathPositions)
                 problems.extend(pathAnalysis)
@@ -1044,9 +1047,6 @@ class optimisePlanPage(ctk.CTkFrame):
     
     def measureCornerWidth(self, position, pathID, cornerType):
         x, y = position
-
-        if not cornerType:
-            print('Error determining corner type')
         
         outerWall = self.findNearestWall(position, cornerType)
         innerDX, innerDY = -cornerType[0], -cornerType[1]
@@ -1170,12 +1170,12 @@ class optimisePlanPage(ctk.CTkFrame):
         self.runButton.configure(text_color='black', fg_color='white')
         self.disableAllButtons()
 
-        if self.evacPoint != -1 and self.startNode != -1 and not self.paths[self.startNode + 10]: # if the user has selected a start and end node
+        if self.evacPoint != -1 and self.startNode != -1 and not app.paths[self.startNode + 10]: # if the user has selected a start and end node
             self.astar(self.startNode, self.evacPoint) # run the A* algorithm to find the path
             self.timeSlider.configure(state='normal') # the slider is enabled as the user can now run a simulation
             self.simulateEvent.configure(state='normal') # the simulate event button is enabled
             app.pathsFound = True # sets the pathsFound boolean to true to indicate the optimal paths have been found on the homepage
-        elif self.startNode != -1 and self.paths[self.startNode + 10]:
+        elif self.startNode != -1 and app.paths[self.startNode + 10]:
             self.pathAlreadyFoundWarning.place(x=300, y=250)
         elif self.evacPoint != -1:
             self.startNodeWarning.place(x=300, y=250)
@@ -1192,7 +1192,7 @@ class optimisePlanPage(ctk.CTkFrame):
 
         if self.evacPoint != -1: # if the user has selected an evac point
             for node in app.nodePositions.keys(): # for each node that is not the evac point
-                if app.nodePositions[node] != (-1,-1) and node != self.evacPoint and not self.paths[node + 10]:
+                if app.nodePositions[node] != (-1,-1) and node != self.evacPoint and not app.paths[node + 10]:
                     self.astar(node, self.evacPoint) # run the A* algorithm to find the path
             # enable to button and set the minimum time on the slider
             self.timeSlider.configure(state='normal')
@@ -1206,8 +1206,8 @@ class optimisePlanPage(ctk.CTkFrame):
     def handleSimulateEventClick(self):
         self.disableAllButtons()
         self.simulateEvent.configure(text_color='white', fg_color='black')
-        for path in self.paths.keys():
-            if self.paths[path] and app.capacityValues[path - 10] == -1:
+        for path in app.paths.keys():
+            if app.paths[path] and app.capacityValues[path - 10] == -1:
                 self.enableAllButtons()
                 self.capacityWarning.place(x=300, y=250)
                 return None
@@ -1335,7 +1335,7 @@ class optimisePlanPage(ctk.CTkFrame):
 
     def setMinimumTime(self):
         minTime = 0
-        for path in self.paths.values():
+        for path in app.paths.values():
             if len(path) / self.WALKING_PACE > minTime: # if the time to evacuate is greater than the current minimum time it will be set as the minimum time
                 minTime = math.ceil(len(path) / self.WALKING_PACE)
         self.timeSlider.configure(from_=minTime, to=300) # the slider is updated to have the minimum time as the minimum value
@@ -1343,27 +1343,28 @@ class optimisePlanPage(ctk.CTkFrame):
 class Canvas(ctk.CTkCanvas):
     def __init__(self, parent, height, width):
         super().__init__(parent)
+        # defining custom colours
+        self.red = '#ff0000'
+        self.blue = '#0010ff'
+        self.green = '#00ff7c'
+        self.orange = '#ffa300'
+        self.pink = '#ff00cf'
+        self.yellow = '#fffc00'
+        self.purple = '#800080'
+        self.darkPurple = '#320032'
+
+        # warning colours
+        self.warningRed = '#ff0000'
+        self.warningOrange = '#ff6b00'
+        self.warningYellow = '#ffd700'
+        self.warningGreen = '#90ee90'
+
         # the canvas is configurable to different sizes depending on which page its on
         self.configure(height=height, width=width, bd=0, background='white', highlightthickness=0)
         self.pixelSize = height // 80 # calculates the size of each canvas pixel in pixels
         self.matrix = [[{'base': 1} for _ in range(120)] for _ in range(80)] # list comprehension to initialize the matrix with the base value of 1
         
     def creation(self, x, y, colourValue, temporary):
-        # defining custom colours
-        red = '#ff0000'
-        blue = '#0010ff'
-        green = '#00ff7c'
-        orange = '#ffa300'
-        pink = '#ff00cf'
-        yellow = '#fffc00'
-        purple = '#800080'
-        darkPurple = '#320032'
-
-        # warning colours
-        warningRed = '#ff0000'
-        warningOrange = '#ff6b00'
-        warningYellow = '#ffd700'
-        warningGreen = '#90ee90'
 
         match colourValue: # setting the colour based on the colour value passed in so we can reuse the function for different colours
             case 0:
@@ -1371,31 +1372,31 @@ class Canvas(ctk.CTkCanvas):
             case 1:
                 colour = 'white'
             case 2:
-                colour = red
+                colour = self.red
             case 3:
-                colour = blue
+                colour = self.blue
             case 4:
-                colour = green
+                colour = self.green
             case 5:
-                colour = orange
+                colour = self.orange
             case 6:
-                colour = pink
+                colour = self.pink
             case 7:
-                colour = yellow
+                colour = self.yellow
             case 8:
-                colour = purple
+                colour = self.purple
             case 9:
-                colour = darkPurple
+                colour = self.darkPurple
             case 20:
-                colour = warningRed
+                colour = self.warningRed
             case 21:
-                colour = warningOrange
+                colour = self.warningOrange
             case 22:
-                colour = warningYellow
+                colour = self.warningYellow
             case 23:
-                colour = warningGreen
+                colour = self.warningGreen
             case _:
-                colour = purple
+                colour = self.purple
 
         if not temporary: # temporary is a parameter that effects whether the pixel will have its id recorded for deletion later if it is temporary
             # the create_rectangle function takes in coordinates of the top left of the rectangle and the bottom right as well as the fill and outline colours
@@ -1410,42 +1411,33 @@ class Canvas(ctk.CTkCanvas):
             squareID = self.create_rectangle((self.pixelSize * (x+1) - self.pixelSize, self.pixelSize * (y+1) - self.pixelSize, self.pixelSize * (x+1) - 1, self.pixelSize * (y+1) - 1), fill=colour, outline=colour)
             return squareID
 
-    def display(self):
-        # defining custom colours
-        red = '#ff0000'
-        blue = '#0010ff'
-        green = '#00ff7c'
-        orange = '#ffa300'
-        pink = '#ff00cf'
-        yellow = '#fffc00'
-        purple = '#800080'
-        darkPurple = '#320032'
-
+    def display(self, drawPaths):
         # resets the canvas so we can redraw the matrix
         self.delete('all')
 
         # for each pixel in the matrix we draw a square with the colour based on the base value of the pixel
         for y in range(80):
             for x in range(120):
+                if drawPaths and app.matrix[y][x].get('paths', []):
+                    colour = self.purple
+                    self.create_rectangle((self.pixelSize * (x+1) - self.pixelSize, self.pixelSize * (y+1) - self.pixelSize, self.pixelSize * (x+1) - 1, self.pixelSize * (y+1) - 1), fill=colour, outline=colour)
+
                 match app.matrix[y][x]['base']:
                     case 0:
                         colour = 'black'
                     case 2:
-                        colour = red
+                        colour = self.red
                     case 3:
-                        colour = blue
+                        colour = self.blue
                     case 4:
-                        colour = green
+                        colour = self.green
                     case 5:
-                        colour = orange
+                        colour = self.orange
                     case 6:
-                        colour = pink
+                        colour = self.pink
                     case 7:
-                        colour = yellow
-                    case 8:
-                        colour = purple
-                    case 9:
-                        colour = darkPurple
+                        colour = self.yellow
+
                 if app.matrix[y][x]['base'] == 0 or app.matrix[y][x]['base'] > 1:
                     self.create_rectangle((self.pixelSize * (x+1) - self.pixelSize, self.pixelSize * (y+1) - self.pixelSize, self.pixelSize * (x+1) - 1, self.pixelSize * (y+1) - 1), fill=colour, outline=colour)
 
