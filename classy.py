@@ -117,12 +117,12 @@ class Menu(ctk.CTkFrame):
 
     def openInputDataPage(self):
         self.master.showPage(self.master.inputDataPage) # calls the method in the app class to show the input data page
-        self.master.inputDataPage.canvas.display(False)
+        self.master.inputDataPage.canvas.display(self.master.matrix, self.master.bottlenecks, False)
         self.after(100, lambda: self.inputDataButton.configure(text_color='black', fg_color='white')) # returns the button to its original state after 100ms
 
     def openOptimisePlanPage(self):
         self.master.showPage(self.master.optimisePlanPage) # calls the method in the app class to show the optimise plan page
-        self.master.optimisePlanPage.canvas.display(True) # refreshes the canvas to show any changes made to the plan
+        self.master.optimisePlanPage.canvas.display(self.master.matrix, self.master.bottlenecks, True) # refreshes the canvas to show any changes made to the plan
         self.after(100, lambda: self.optimisePlanButton.configure(text_color='black', fg_color='white'))
 
 class homePage(ctk.CTkFrame):
@@ -225,7 +225,7 @@ class homePage(ctk.CTkFrame):
         # also sets the checkbox to the correct state
         if self.master.dataAdded.get() == True:
             self.noData = False
-            self.canvas.display(True)
+            self.canvas.display(self.master.matrix, self.master.bottlenecks, True)
             self.sitePlanCheckBox.select()
         else:
             self.noData = True
@@ -239,29 +239,29 @@ class homePage(ctk.CTkFrame):
         # resets the checkbox that indicates whether the user has placed nodes
         self.placeNodesCheckBox.deselect()
         # if the user has placed a node one of the values in the dictionary will not be (-1,-1) and hence the checkbox will be selected
-        for coord in app.nodePositions.values():
+        for coord in self.master.nodePositions.values():
             if coord != (-1,-1):
                 self.placeNodesCheckBox.select()
                 break
 
         # sets the checkbox to indicate to the user if they have found the optimal paths
-        if app.pathsFound == True:
+        if self.master.pathsFound == True:
             self.optimiseCheckBox.select()
         else:
             self.optimiseCheckBox.deselect()
 
-        if app.bottlenecksFound == True:
+        if self.master.bottlenecksFound == True:
             self.analyseCheckBox.select()
         else:
             self.analyseCheckBox.deselect()
 
-        for capacity in app.capacityValues.values():
+        for capacity in self.master.capacityValues.values():
             if capacity > 0:
                 self.capacityDataCheckBox.select()
                 break
             self.capacityDataCheckBox.deselect()
         
-        for index, bottleneck in enumerate(app.bottlenecks):
+        for index, bottleneck in enumerate(self.master.bottlenecks):
             position, width, severity = bottleneck
             if severity == 1:
                 self.warningTable.insert(parent='', index=tk.END, values=(index, 'Bottleneck', 'Urgent Bottleneck'))
@@ -271,7 +271,7 @@ class homePage(ctk.CTkFrame):
     def warningSelected(self,_):
         for i in self.warningTable.selection():
             index = self.warningTable.item(i)['values'][0]
-            position = app.bottlenecks[index][0]
+            position = self.master.bottlenecks[index][0]
             x, y = position
             self.highlightPoint(x, y)
 
@@ -458,7 +458,7 @@ class inputDataPage(ctk.CTkFrame):
                 self.dragIndex += 1
             if self.canvas.matrix[y][x]['base'] > 1: # if the pixel is a node it will be removed and the node will be available again
                 self.nodes[self.canvas.matrix[y][x]['base']] = True
-                app.nodePositions[self.canvas.matrix[y][x]['base']] = (-1, -1) # sets the node position to (-1,-1) to indicate it is not placed
+                self.master.nodePositions[self.canvas.matrix[y][x]['base']] = (-1, -1) # sets the node position to (-1,-1) to indicate it is not placed
                 self.bullseyeButton.configure(state='normal') # if the bullseye was disabled in the case of no nodes left it will be re-enabled
             if self.currentTool < 2 or self.nodes[self.currentTool] == True: # if the current tool is a pencil or eraser or the node is available
                 # the pixel is drawn on the canvas and the previous action is stored in the previousActions list to allow for undo and redo
@@ -467,7 +467,7 @@ class inputDataPage(ctk.CTkFrame):
                 self.planInserted = True
             if self.currentTool > 1: # if the current tool is a node
                 self.nodes[self.currentTool] = False # the node is set to unavailable
-                app.nodePositions[self.currentTool] = (x,y) # the position of the node is stored in the app wide variable
+                self.master.nodePositions[self.currentTool] = (x,y) # the position of the node is stored in the app wide variable
                 for node, available in self.nodes.items(): # if there are no nodes left the bullseye button will be disabled
                     if available == True:
                         self.currentTool = node
@@ -576,11 +576,11 @@ class inputDataPage(ctk.CTkFrame):
             self.capacityDataPage.place_forget() # hides the capacity data page
             self.capacityButton.configure(text='Input Capacity Data') # restores the default text of the capacity button
             # calls a method from the capacityDataPage class to get the values and stores them in the app wide variable
-            app.capacityValues = self.capacityDataPage.getValues()
+            self.master.capacityValues = self.capacityDataPage.getValues()
             self.capacityInputOpen = False # sets the boolean to false to indicate the page is closed
         else:
             # calls a method from the capacityDataPage class to refresh the page so that it will update as the user draws/removes nodes
-            self.capacityDataPage.refresh()
+            self.capacityDataPage.refresh(self.master.nodePositions)
             self.capacityDataPage.place(x = 200, y = 350) # places the capacity data page in the correct position
             self.capacityButton.configure(text='Done') # changes the text of the capacity button so that the user clicks this when finished to close the page
             self.capacityInputOpen = True # sets the boolean to true to indicate the page is open
@@ -652,13 +652,13 @@ class inputDataPage(ctk.CTkFrame):
 
             if colourValue > 1 and self.nodes[colourValue] == True: # if the pixel was a node and the node is still available
                 self.nodes[colourValue] = False # the node is set to unavailable
-                app.nodePositions[colourValue] = (x,y) # the position of the node is stored in the app wide variable
+                self.master.nodePositions[colourValue] = (x,y) # the position of the node is stored in the app wide variable
             elif colourValue > 1 and self.nodes[colourValue] == False: # if the pixel was a node and the node is not available we avoid running any more code
                 break
 
             if self.canvas.matrix[y][x]['base'] > 1: # if there was a node at the position that will be replaced by a previous action
                 self.nodes[self.canvas.matrix[y][x]['base']] = True # the node is set to available
-                app.nodePositions[self.canvas.matrix[y][x]['base']] = (-1, -1) # the position of the node is set to (-1,-1) to indicate it is not placed
+                self.master.nodePositions[self.canvas.matrix[y][x]['base']] = (-1, -1) # the position of the node is set to (-1,-1) to indicate it is not placed
                 self.bullseyeButton.configure(state='normal') # if the bullseye button was disabled it will be re-enabled
 
             # we store the previous state of the pixel in the redoActions list so that the action can be redone
@@ -683,13 +683,13 @@ class inputDataPage(ctk.CTkFrame):
 
             if colourValue > 1 and self.nodes[colourValue] == True: # if the pixel was a node and the node is available
                 self.nodes[colourValue] = False # the node is set to unavailable
-                app.nodePositions[colourValue] = (x,y) # the position of the node is stored in the app wide variable
+                self.master.nodePositions[colourValue] = (x,y) # the position of the node is stored in the app wide variable
             elif colourValue > 1 and self.nodes[colourValue] == False: # if the pixel was a node and the node is not available we avoid running any more code
                 break
 
             if self.canvas.matrix[y][x]['base'] > 1: # if there was a node at the position that will be replaced by a redo action
                 self.nodes[self.canvas.matrix[y][x]['base']] = True # the node is set to available
-                app.nodePositions[self.canvas.matrix[y][x]['base']] = (-1, -1)  # the position of the node is set to (-1,-1) to indicate it is not placed
+                self.master.nodePositions[self.canvas.matrix[y][x]['base']] = (-1, -1)  # the position of the node is set to (-1,-1) to indicate it is not placed
 
             # we store the previous state of the pixel in the previousActions list so that the action can be undone
             self.previousActions.append(dataPoint(x, y, self.canvas.matrix[y][x]['base'], colourValue, dragIndex))
@@ -713,16 +713,16 @@ class inputDataPage(ctk.CTkFrame):
         # the nodes are reset to available and their positions are reset
         for node in self.nodes.keys():
             self.nodes[node] = True
-            app.nodePositions[node] = (-1, -1)
+            self.master.nodePositions[node] = (-1, -1)
 
         # the capacity values are reset to -1
-        for node in app.capacityValues.keys():
-            app.capacityValues[node] = -1
+        for node in self.master.capacityValues.keys():
+            self.master.capacityValues[node] = -1
 
-        for path in app.paths.keys():
-            app.paths[path] = []
+        for path in self.master.paths.keys():
+            self.master.paths[path] = []
 
-        app.bottlenecks = []
+        self.master.bottlenecks = []
         # if the bullseye button was disabled it will be re-enabled
         self.bullseyeButton.configure(state='normal')
         self.planInserted = False # the planInserted boolean is set to false to indicate no data has been added
@@ -737,8 +737,8 @@ class inputDataPage(ctk.CTkFrame):
             self.master.dataAdded.set(True) # the dataAdded boolean is set to true to indicate data has been added
         else:
             self.master.dataAdded.set(False) # if the canvas has been cleared and done button pressed dataAdded is set to false
-            app.pathsFound = False
-            app.bottlenecksFound = False
+            self.master.pathsFound = False
+            self.master.bottlenecksFound = False
 
         # copies the matrix from the input data page to the app wide matrix, deepcopy is used to avoid the two variables being linked
         self.master.matrix = copy.deepcopy(self.canvas.matrix)
@@ -771,7 +771,7 @@ class inputDataPage(ctk.CTkFrame):
             self.canvas.matrix = json.load(file) # loads the matrix from the file into the input data page matrix
             self.master.dataAdded.set(True) # sets the dataAdded boolean to true to indicate data has been added
             self.master.matrix = copy.deepcopy(self.canvas.matrix) # copies the matrix from the input data page to the app wide matrix
-            self.canvas.display(False) # displays the data from the file on the canvas
+            self.canvas.display(self.master.matrix, self.master.bottlenecks, False) # displays the data from the file on the canvas
             self.planInserted = True
 
     def noNodesLeft(self): # function to disable the bullseye button when there are no nodes left
@@ -938,8 +938,8 @@ class optimisePlanPage(ctk.CTkFrame):
     def astar(self, startNode, endNode): # A* algorithm *will be explained in the report*
         self.canvas.matrix = copy.deepcopy(self.master.matrix)
         tempSquareIDs = []
-        start = app.nodePositions[startNode]
-        end = app.nodePositions[endNode]
+        start = self.master.nodePositions[startNode]
+        end = self.master.nodePositions[endNode]
         count = 0
         openSet = PriorityQueue()
         openSet.put((0,count,start))
@@ -967,7 +967,7 @@ class optimisePlanPage(ctk.CTkFrame):
                 self.enableAllButtons()
                 self.setMinimumTime()
                 self.after(250, self.deleteTemporarySquares(tempSquareIDs))
-                app.matrix = copy.deepcopy(self.canvas.matrix)
+                self.master.matrix = copy.deepcopy(self.canvas.matrix)
                 return True
 
             if current[1] < self.MAX_HEIGHT and self.canvas.matrix[current[1] + 1][current[0]]['base'] != 0:
@@ -1006,7 +1006,7 @@ class optimisePlanPage(ctk.CTkFrame):
             current = previousNodes[current]
             if current != start:
                 self.canvas.creation(current[0], current[1], startNode+10, False)
-                app.paths[startNode+10].append(current)
+                self.master.paths[startNode+10].append(current)
     
     def heuristic(self, point1, point2): # function to calculate the heuristic for the A* algorithm *explained in the report*
         x1, y1 = point1
@@ -1015,7 +1015,7 @@ class optimisePlanPage(ctk.CTkFrame):
 
     def flowSimulation(self): # function to run the flow simulation algorithm *explained in the report*
         problems = []
-        for pathID, pathPositions in app.paths.items():
+        for pathID, pathPositions in self.master.paths.items():
             if pathPositions:
                 pathAnalysis = self.analysePath(pathID, pathPositions)
                 problems.extend(pathAnalysis)
@@ -1200,7 +1200,7 @@ class optimisePlanPage(ctk.CTkFrame):
         x, y = position
 
         for pathID in self.canvas.matrix[y][x].get('paths', []):
-            totalPeople += app.capacityValues[pathID - 10]
+            totalPeople += self.master.capacityValues[pathID - 10]
 
         return totalPeople
 
@@ -1208,12 +1208,12 @@ class optimisePlanPage(ctk.CTkFrame):
         self.runButton.configure(text_color='black', fg_color='white')
         self.disableAllButtons()
 
-        if self.evacPoint != -1 and self.startNode != -1 and not app.paths[self.startNode + 10]: # if the user has selected a start and end node
+        if self.evacPoint != -1 and self.startNode != -1 and not self.master.paths[self.startNode + 10]: # if the user has selected a start and end node
             self.astar(self.startNode, self.evacPoint) # run the A* algorithm to find the path
             self.timeSlider.configure(state='normal') # the slider is enabled as the user can now run a simulation
             self.simulateEvent.configure(state='normal') # the simulate event button is enabled
-            app.pathsFound = True # sets the pathsFound boolean to true to indicate the optimal paths have been found on the homepage
-        elif self.startNode != -1 and app.paths[self.startNode + 10]:
+            self.master.pathsFound = True # sets the pathsFound boolean to true to indicate the optimal paths have been found on the homepage
+        elif self.startNode != -1 and self.master.paths[self.startNode + 10]:
             self.pathAlreadyFoundWarning.place(x=300, y=250)
         elif self.evacPoint != -1:
             self.startNodeWarning.place(x=300, y=250)
@@ -1229,14 +1229,14 @@ class optimisePlanPage(ctk.CTkFrame):
         self.disableAllButtons()
 
         if self.evacPoint != -1: # if the user has selected an evac point
-            for node in app.nodePositions.keys(): # for each node that is not the evac point
-                if app.nodePositions[node] != (-1,-1) and node != self.evacPoint and not app.paths[node + 10]:
+            for node in self.master.nodePositions.keys(): # for each node that is not the evac point
+                if self.master.nodePositions[node] != (-1,-1) and node != self.evacPoint and not self.master.paths[node + 10]:
                     self.astar(node, self.evacPoint) # run the A* algorithm to find the path
             # enable to button and set the minimum time on the slider
             self.timeSlider.configure(state='normal')
             self.simulateEvent.configure(state='normal')
             self.setMinimumTime()
-            app.pathsFound = True
+            self.master.pathsFound = True
         else:
             self.evacPointWarning.place(x=300, y=250)
         self.enableAllButtons()
@@ -1244,15 +1244,15 @@ class optimisePlanPage(ctk.CTkFrame):
     def handleSimulateEventClick(self):
         self.disableAllButtons()
         self.simulateEvent.configure(text_color='white', fg_color='black')
-        for path in app.paths.keys():
-            if app.paths[path] and app.capacityValues[path - 10] == -1:
+        for path in self.master.paths.keys():
+            if self.master.paths[path] and self.master.capacityValues[path - 10] == -1:
                 self.enableAllButtons()
                 self.capacityWarning.place(x=300, y=250)
                 return None
         bottlenecks = self.flowSimulation() # runs the flow simulation algorithm
         if bottlenecks:
-            app.bottlenecks = bottlenecks
-        app.bottlenecksFound = True
+            self.master.bottlenecks = bottlenecks
+        self.master.bottlenecksFound = True
         self.enableAllButtons()
 
     def handleEvacPointClick(self):
@@ -1362,7 +1362,7 @@ class optimisePlanPage(ctk.CTkFrame):
         self.resetButtons()
         # for each button in the dictionary of buttons we check if the node is available and if it is we pack the button
         for button, node in self.Buttons.items():
-            if app.nodePositions[node] != (-1,-1):
+            if self.master.nodePositions[node] != (-1,-1):
                 button.pack(pady=2)
 
     def nodeChooser(self):
@@ -1375,7 +1375,7 @@ class optimisePlanPage(ctk.CTkFrame):
 
     def setMinimumTime(self):
         minTime = 0
-        for path in app.paths.values():
+        for path in self.master.paths.values():
             if len(path) / self.WALKING_PACE > minTime: # if the time to evacuate is greater than the current minimum time it will be set as the minimum time
                 minTime = math.ceil(len(path) / self.WALKING_PACE)
         self.timeSlider.configure(from_=minTime, to=300) # the slider is updated to have the minimum time as the minimum value
@@ -1451,18 +1451,18 @@ class Canvas(ctk.CTkCanvas):
             squareID = self.create_rectangle((self.pixelSize * (x+1) - self.pixelSize, self.pixelSize * (y+1) - self.pixelSize, self.pixelSize * (x+1) - 1, self.pixelSize * (y+1) - 1), fill=colour, outline=colour)
             return squareID
 
-    def display(self, drawBottlenecks):
+    def display(self, matrix, bottlenecks, drawBottlenecks):
         # resets the canvas so we can redraw the matrix
         self.delete('all')
 
         # for each pixel in the matrix we draw a square with the colour based on the base value of the pixel
         for y in range(80):
             for x in range(120):
-                if app.matrix[y][x].get('paths', []):
+                if matrix[y][x].get('paths', []):
                     colour = self.purple
                     self.create_rectangle((self.pixelSize * (x+1) - self.pixelSize, self.pixelSize * (y+1) - self.pixelSize, self.pixelSize * (x+1) - 1, self.pixelSize * (y+1) - 1), fill=colour, outline=colour)
 
-                match app.matrix[y][x]['base']:
+                match matrix[y][x]['base']:
                     case 0:
                         colour = 'black'
                     case 2:
@@ -1478,11 +1478,11 @@ class Canvas(ctk.CTkCanvas):
                     case 7:
                         colour = self.yellow
 
-                if app.matrix[y][x]['base'] == 0 or app.matrix[y][x]['base'] > 1:
+                if matrix[y][x]['base'] == 0 or matrix[y][x]['base'] > 1:
                     self.create_rectangle((self.pixelSize * (x+1) - self.pixelSize, self.pixelSize * (y+1) - self.pixelSize, self.pixelSize * (x+1) - 1, self.pixelSize * (y+1) - 1), fill=colour, outline=colour)
 
         if drawBottlenecks:
-            for bottleneck in app.bottlenecks:
+            for bottleneck in bottlenecks:
                 position, width, severity = bottleneck
                 x, y = position
                 if severity == 1:
@@ -1577,7 +1577,7 @@ class capacityDataInput(ctk.CTkFrame):
         self.titleLabel.pack(padx=200, pady=10)
         self.scrollFrame.pack(padx=10, pady=(0,10), expand=True, fill='both')
 
-    def refresh(self):
+    def refresh(self, nodePositions):
         
         # removes all the entry widgets from the scrollable frame
         for entry in self.entries.keys():
@@ -1585,7 +1585,7 @@ class capacityDataInput(ctk.CTkFrame):
 
         # packs the entry widgets for the nodes that have been placed by the user
         for entry, node in self.entries.items():
-            if app.nodePositions[node] != (-1,-1):
+            if nodePositions[node] != (-1,-1):
                 entry.pack(pady=2)
     
     def getValues(self): # a method to get return the values of the input capacity data
