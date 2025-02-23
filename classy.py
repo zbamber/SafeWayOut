@@ -162,11 +162,18 @@ class homePage(ctk.CTkFrame):
         #creating the widgets that will be placed in the lower content frame
         self.warningLabel = ctk.CTkLabel(self.lowerContentFrame, text='Warning!', fg_color='white', text_color='black', font=('Excalifont', 25) )
         self.warningTable = ttk.Treeview(self.lowerContentFrame, columns=('Index','Type', 'Extra Information'), show='headings')
+        self.warningTable.column('Index', width=100, anchor='center')
+        self.warningTable.column('Type', width=250, anchor='center')
+        self.warningTable.column('Extra Information', width=400, anchor='center')
         # initialising the headings of the table
-        self.warningTable.heading('Index', text='Index')
-        self.warningTable.heading('Type', text='Type')
-        self.warningTable.heading('Extra Information', text='Extra Information')
+        self.warningTable.heading('Index', text='Index', anchor='center')
+        self.warningTable.heading('Type', text='Type', anchor='center')
+        self.warningTable.heading('Extra Information', text='Extra Information', anchor='center')
         self.warningTable.bind('<<TreeviewSelect>>', self.warningSelected)
+
+        style = ttk.Style()
+        style.configure("Treeview", font=('Excalifont',10))
+        style.configure("Treeview.Heading", font=('Excalifont',15))
 
         # creating the widgets that will be placed in the upper content frame
         self.mapContainer = ctk.CTkFrame(self.upperContentFrame, corner_radius=15, border_color='black', border_width=5, bg_color='white', fg_color='white')
@@ -263,7 +270,6 @@ class homePage(ctk.CTkFrame):
 
     def warningSelected(self,_):
         for i in self.warningTable.selection():
-            print(self.warningTable.item(i)['values'])
             index = self.warningTable.item(i)['values'][0]
             position = app.bottlenecks[index][0]
             x, y = position
