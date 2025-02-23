@@ -35,7 +35,8 @@ class App(tk.Tk):
         self.nodePositions = {2:(-1,-1), 3:(-1,-1), 4:(-1,-1), 5:(-1,-1), 6:(-1,-1), 7:(-1,-1)}
         self.capacityValues={2:-1,3:-1,4:-1,5:-1,6:-1,7:-1}
         self.dataAdded = ctk.BooleanVar(value=False)
-        self.simulationRan = False
+        self.pathsFound = False
+        self.bottlenecksFound = False
     
     def showPage(self, page): # function to switch between pages
 
@@ -166,10 +167,10 @@ class homePage(ctk.CTkFrame):
         #creating the checkboxes that show the state of the application to the user
         self.sitePlanCheckBox = ctk.CTkCheckBox(self.toDoContainer, text=' Insert Site Plan', **checkboxStyling)
         self.placeNodesCheckBox = ctk.CTkCheckBox(self.toDoContainer, text=' Place Nodes', **checkboxStyling)
+        self.capacityDataCheckBox = ctk.CTkCheckBox(self.toDoContainer, text=' Import Capacity Data', **checkboxStyling)
         self.optimiseCheckBox = ctk.CTkCheckBox(self.toDoContainer, text=' Optimise', **checkboxStyling)
         self.analyseCheckBox = ctk.CTkCheckBox(self.toDoContainer, text=' Analyse Bottlenecks', **checkboxStyling)
-        self.capacityDataCheckBox = ctk.CTkCheckBox(self.toDoContainer, text=' Import Capacity Data', **checkboxStyling)
-        self.simulateCheckBox = ctk.CTkCheckBox(self.toDoContainer, text=' Simulate Event', **checkboxStyling)
+        # self.simulateCheckBox = ctk.CTkCheckBox(self.toDoContainer, text=' Simulate Event', **checkboxStyling)
 
     def placeWidgets(self):
         # lower frame
@@ -183,10 +184,10 @@ class homePage(ctk.CTkFrame):
         self.toDoLabel.pack(pady=20)
         self.sitePlanCheckBox.pack(fill='x', padx=30, pady=10)
         self.placeNodesCheckBox.pack(fill='x', padx=30, pady=10)
+        self.capacityDataCheckBox.pack(fill='x', padx=30, pady=10)
         self.optimiseCheckBox.pack(fill='x', padx=30, pady=10)
         self.analyseCheckBox.pack(fill='x', padx=30, pady=10)
-        self.capacityDataCheckBox.pack(fill='x', padx=30, pady=10)
-        self.simulateCheckBox.pack(fill='x', padx=30, pady=10)
+        # self.simulateCheckBox.pack(fill='x', padx=30, pady=10)
 
         # the map container and to do container are placed side by side in the upper content frame
         self.mapContainer.grid(row=0, column=0, sticky='nsew', padx=(10, 5), pady=10)
@@ -225,11 +226,23 @@ class homePage(ctk.CTkFrame):
                 self.placeNodesCheckBox.select()
                 break
 
-        # sets the checkbox to indicate to the user if they have ran the simulation
-        if app.simulationRan == True:
+        # sets the checkbox to indicate to the user if they have found the optimal paths
+        if app.pathsFound == True:
             self.optimiseCheckBox.select()
         else:
             self.optimiseCheckBox.deselect()
+
+        if app.bottlenecksFound == True:
+            self.analyseCheckBox.select()
+        else:
+            self.analyseCheckBox.deselect()
+
+        print(app.capacityValues)
+        for capacity in app.capacityValues.values():
+            if capacity > 0:
+                self.capacityDataCheckBox.select()
+                break
+            self.capacityDataCheckBox.deselect()
 
 class dataPoint(): # this class provides a blueprint for the pixels that are to be stored in the previousActions and redoActions lists
     def __init__(self, x, y, prevColour, colour, dragIndex):
@@ -407,6 +420,7 @@ class inputDataPage(ctk.CTkFrame):
                 # the pixel is drawn on the canvas and the previous action is stored in the previousActions list to allow for undo and redo
                 self.previousActions.append(dataPoint(x, y, self.canvas.matrix[y][x]['base'], self.currentTool, self.dragIndex))
                 self.canvas.creation(x,y,self.currentTool,False)
+                self.planInserted = True
             if self.currentTool > 1: # if the current tool is a node
                 self.nodes[self.currentTool] = False # the node is set to unavailable
                 app.nodePositions[self.currentTool] = (x,y) # the position of the node is stored in the app wide variable
@@ -416,8 +430,6 @@ class inputDataPage(ctk.CTkFrame):
                         break
                     elif node == 7:
                         self.noNodesLeft()
-        if self.master.dataAdded.get() == True: # if the user has added data the checkbox will be selected
-            self.planInserted = True
 
     def handleLineClick(self, event):
         # converting the x and y coordinates of the mouse to the corresponding pixel on the canvas
@@ -583,7 +595,6 @@ class inputDataPage(ctk.CTkFrame):
         self.canvas.unbind('<Motion>')
 
     def handleUndoButtonClick(self):
-        self.deselectCurrentButton()
         self.undoButton.configure(text_color='white', fg_color='black', image=self.blackUndo)
         
         while self.previousActions: # while there are previous actions to undo
@@ -615,7 +626,6 @@ class inputDataPage(ctk.CTkFrame):
                 break
 
     def handleRedoButtonClick(self):
-        self.deselectCurrentButton()
         self.redoButton.configure(text_color='white', fg_color='black', image=self.blackRedo)
 
         while self.redoActions: # while there are actions to redo
@@ -661,6 +671,10 @@ class inputDataPage(ctk.CTkFrame):
             self.nodes[node] = True
             app.nodePositions[node] = (-1, -1)
 
+        # the capacity values are reset to -1
+        for node in app.capacityValues.keys():
+            app.capacityValues[node] = -1
+
         # if the bullseye button was disabled it will be re-enabled
         self.bullseyeButton.configure(state='normal')
         self.planInserted = False # the planInserted boolean is set to false to indicate no data has been added
@@ -675,7 +689,8 @@ class inputDataPage(ctk.CTkFrame):
             self.master.dataAdded.set(True) # the dataAdded boolean is set to true to indicate data has been added
         else:
             self.master.dataAdded.set(False) # if the canvas has been cleared and done button pressed dataAdded is set to false
-            app.simulationRan = False # also resets whether the simulation has been ran
+            app.pathsFound = False
+            app.bottlenecksFound = False
 
         # copies the matrix from the input data page to the app wide matrix, deepcopy is used to avoid the two variables being linked
         self.master.matrix = copy.deepcopy(self.canvas.matrix)
@@ -709,6 +724,7 @@ class inputDataPage(ctk.CTkFrame):
             self.master.dataAdded.set(True) # sets the dataAdded boolean to true to indicate data has been added
             self.master.matrix = copy.deepcopy(self.canvas.matrix) # copies the matrix from the input data page to the app wide matrix
             self.canvas.display() # displays the data from the file on the canvas
+            self.planInserted = True
 
     def noNodesLeft(self): # function to disable the bullseye button when there are no nodes left
         self.currentTool = 0
@@ -815,6 +831,7 @@ class optimisePlanPage(ctk.CTkFrame):
         self.evacPointWarning = warningWidget(self, message='Must select an Evac Point')
         self.startNodeWarning = warningWidget(self, message='Must select a Start Node')
         self.noSelectionWarning = warningWidget(self, message='Must Select Start Node and Evac Point')
+        self.pathAlreadyFoundWarning = warningWidget(self, message='You have already found this path')
 
         # helper function to define the hovering behaviour for these buttons
         self.handleHovering(self.evacPointButton)
@@ -1136,7 +1153,6 @@ class optimisePlanPage(ctk.CTkFrame):
         }
         return connections
 
-
     def calculateRequiredWidth(self, totalPeople):
         desiredFlow = totalPeople / self.timeSlider.get()
         return desiredFlow / self.PEOPLE_PER_SECOND_PER_METRE
@@ -1150,161 +1166,25 @@ class optimisePlanPage(ctk.CTkFrame):
 
         return totalPeople
 
-    # def runFlowSimulation(self): # function to run the flow simulation algorithm *explained in the report*
-    #     problems = []
-    #     pathWidths = []
-    #     for path in self.paths.keys():
-    #         if self.paths[path]:
-    #             for position in self.paths[path]:
-    #                 pathWidth = 1
-    #                 if position[1] < 79 and path not in self.canvas.matrix[position[1] + 1][position[0]].get('paths', []) and position[1] > 0 and path not in self.canvas.matrix[position[1] - 1][position[0]].get('paths', []): # path is horizontal
-    #                     tempCount  = 0
-    #                     while tempCount < app.capacityValues[path - 10] / self.PEOPLE_PER_SECOND_PER_METRE:
-    #                         if position[1] + tempCount < 79 and self.canvas.matrix[position[1] + tempCount + 1][position[0]]['base'] != 0:
-    #                             tempCount += 1
-    #                         else:
-    #                             pathWidth += tempCount
-    #                             break
-    #                     else:
-    #                         pathWidth += tempCount
-    #                     tempCount  = 0
-    #                     while tempCount < app.capacityValues[path - 10] / self.PEOPLE_PER_SECOND_PER_METRE:
-    #                         if position[1] - tempCount > 0 and self.canvas.matrix[position[1] - tempCount - 1][position[0]]['base'] != 0:
-    #                             tempCount += 1
-    #                         else:
-    #                             pathWidth += tempCount
-    #                             break
-    #                     else:
-    #                         pathWidth += tempCount
-    #                 elif position[0] < 119 and path not in self.canvas.matrix[position[1]][position[0] + 1].get('paths', []) and position[0] > 0 and path not in self.canvas.matrix[position[1]][position[0] - 1].get('paths', []): # path vertical
-    #                     tempCount  = 0
-    #                     while tempCount < app.capacityValues[path - 10] / self.PEOPLE_PER_SECOND_PER_METRE:
-    #                         if position[0] + tempCount < 119 and self.canvas.matrix[position[1]][position[0] + tempCount + 1]['base'] != 0:
-    #                             tempCount += 1
-    #                         else:
-    #                             pathWidth += tempCount
-    #                             break
-    #                     else:
-    #                         pathWidth += tempCount
-    #                     tempCount  = 0
-    #                     while tempCount < app.capacityValues[path - 10] / self.PEOPLE_PER_SECOND_PER_METRE:
-    #                         if position[0] - tempCount > 0 and self.canvas.matrix[position[1]][position[0] - tempCount - 1]['base'] != 0:
-    #                             tempCount += 1
-    #                         else:
-    #                             pathWidth += tempCount
-    #                             break
-    #                     else:
-    #                         pathWidth += tempCount
-    #                 elif position[1] < 79 and path not in self.canvas.matrix[position[1] + 1][position[0]].get('paths', []) and position[0] < 119 and path not in self.canvas.matrix[position[1]][position[0] + 1].get('paths', []):
-    #                     outsideWall = self.findNearestWall(position, (1, 1))
-    #                     if 0 <= position[0] - 1 <= 119 and 0 <= position[1] - 1 <= 79:
-    #                         if self.canvas.matrix[position[1] - 1][position[0] - 1]['base'] == 0:
-    #                             insideWall = (position[0] - 1, position[1] - 1)
-    #                         else:
-    #                             insideWall = self.findNearestWall((position[0] - 1, position[1] - 1), (-1, -1))
-    #                     else:
-    #                         insideWall = (position[0] - 1, position[1] - 1)
-    #                     pathWidth  = self.calculateDistance(outsideWall, insideWall)
-
-    #                 elif position[1] < 79 and path not in self.canvas.matrix[position[1] + 1][position[0]].get('paths', []) and position[0] > 0 and path not in self.canvas.matrix[position[1]][position[0] - 1].get('paths', []):
-    #                     outsideWall = self.findNearestWall(position, (-1, 1))
-    #                     if 0 <= position[0] + 1 <= 119 and 0 <= position[1] - 1 <= 79:
-    #                         if self.canvas.matrix[position[1] - 1][position[0] + 1]['base'] == 0:
-    #                             insideWall = (position[0] + 1, position[1] - 1)
-    #                         else:
-    #                             insideWall = self.findNearestWall((position[0] + 1, position[1] - 1), (1, -1))
-    #                     else:
-    #                         insideWall = (position[0] + 1, position[1] - 1)
-    #                     pathWidth  = self.calculateDistance(outsideWall, insideWall)
-
-    #                 elif position[1] > 0 and path not in self.canvas.matrix[position[1] - 1][position[0]].get('paths', []) and position[0] < 119 and path not in self.canvas.matrix[position[1]][position[0] + 1].get('paths', []):
-    #                     outsideWall = self.findNearestWall(position, (1, -1))
-    #                     if 0 <= position[0] - 1 <= 119 and 0 <= position[1] + 1 <= 79:
-    #                         if self.canvas.matrix[position[1] + 1][position[0] - 1]['base'] == 0:
-    #                             insideWall = (position[0] - 1, position[1] + 1)
-    #                         else:
-    #                             insideWall = self.findNearestWall((position[0] - 1, position[1] + 1), (-1, 1))
-    #                     else:
-    #                         insideWall = (position[0] - 1, position[1] + 1)
-    #                     pathWidth  = self.calculateDistance(outsideWall, insideWall)
-
-    #                 elif position[1] > 0 and path not in self.canvas.matrix[position[1] - 1][position[0]].get('paths', []) and position[0] > 0 and path not in self.canvas.matrix[position[1]][position[0] - 1].get('paths', []):
-    #                     outsideWall = self.findNearestWall(position, (-1, -1))
-    #                     if 0 <= position[0] + 1 <= 119 and 0 <= position[1] + 1 <= 79:
-    #                         if self.canvas.matrix[position[1] + 1][position[0] + 1]['base'] == 0:
-    #                             insideWall = (position[0] + 1, position[1] + 1)
-    #                         else:
-    #                             insideWall = self.findNearestWall((position[0] + 1, position[1] + 1), (1, 1))
-    #                     else:
-    #                         insideWall = (position[0] + 1, position[1] + 1)
-    #                     pathWidth  = self.calculateDistance(outsideWall, insideWall)
-
-    #                 people = 0
-
-    #                 for group in self.canvas.matrix[position[1]][position[0]].get('paths', []):
-    #                     people += app.capacityValues[group - 10]
-                        
-    #                 pathWidths.append((position, pathWidth))
-
-    #             desiredFlow = people / self.timeSlider.get()
-    #             minWidth = desiredFlow / self.PEOPLE_PER_SECOND_PER_METRE
-
-    #             pathWidths.sort(key=lambda element: element[1] / minWidth)
-
-    #             counter = 0
-    #             previous = -1
-
-    #             for position in pathWidths:
-    #                 if counter > 20 and position[1] != previous:
-    #                     break
-    #                 if position[1] < minWidth:
-    #                     problems.append(position)
-    #                     self.canvas.creation(position[0][0], position[0][1], 2, False)
-    #                 else:
-    #                     problems.append(position)
-    #                     self.canvas.creation(position[0][0], position[0][1], 5, False)
-    #                 counter += 1
-    #                 previous = position[1]
-
-    # def findNearestWall(self, corner, direction): # function to find the nearest wall to a given position *explained in the report*
-    #     nearestWall = (-1,-1)
-    #     layer = 1
-    #     while nearestWall == (-1,-1):
-    #         position = 0
-    #         while position <= layer:
-    #             if 0 <= corner[1] + direction[1] * position <= 79 and 0 <= corner[0] + direction[0] * layer <= 119 and self.canvas.matrix[corner[1] + direction[1] * position][corner[0] + direction[0] * layer]['base'] == 0:
-    #                 nearestWall = (corner[0] + direction[0] * layer, corner[1] + direction[1] * position)
-    #                 break
-    #             elif 0 <= corner[1] + direction[1] * layer <= 79 and 0 <= corner[0] + direction[0] * position <= 119 and self.canvas.matrix[corner[1] + direction[1] * layer][corner[0] + direction[0] * position]['base'] == 0:
-    #                 nearestWall = (corner[0] + direction[0] * position, corner[1] + direction[1] * layer)
-    #                 break
-    #             position += 1
-    #         if not (0 <= corner[1] + direction[1] * layer <= 79) and not (0 <= corner[0] + direction[0] * layer <= 119):
-    #             break
-    #         layer += 1
-    #     return nearestWall
-
-    # def calculateDistance(self, corner, wall): # calculates the distance between the passed in coordinates for corner and wall
-    #     return math.sqrt(abs(corner[0]-wall[0]) ** 2 + abs(corner[1]-wall[1]) ** 2)
-    
     def handleRunButtonClick(self): # called when the search is run for one path
         self.runButton.configure(text_color='black', fg_color='white')
         self.disableAllButtons()
 
-        if self.evacPoint != -1 and self.startNode != -1: # if the user has selected a start and end node
+        if self.evacPoint != -1 and self.startNode != -1 and not self.paths[self.startNode + 10]: # if the user has selected a start and end node
             self.astar(self.startNode, self.evacPoint) # run the A* algorithm to find the path
             self.timeSlider.configure(state='normal') # the slider is enabled as the user can now run a simulation
             self.simulateEvent.configure(state='normal') # the simulate event button is enabled
+            app.pathsFound = True # sets the pathsFound boolean to true to indicate the optimal paths have been found on the homepage
+        elif self.startNode != -1 and self.paths[self.startNode + 10]:
+            self.pathAlreadyFoundWarning.place(x=300, y=250)
         elif self.evacPoint != -1:
             self.startNodeWarning.place(x=300, y=250)
         elif self.startNode != -1:
             self.evacPointWarning.place(x=300, y=250)
         else:
             self.noSelectionWarning.place(x=300, y=250)
-
         self.enableAllButtons()
         self.setMinimumTime() # sets the minimum time on the slider
-        app.simulationRan = True # sets the simulationRan boolean to true to indicate the simulation has been run on the home page
     
     def handleShowAllPathsClick(self): # this is called when the user wants to run all the paths at once
         self.showAllPaths.configure(text_color='white', fg_color='black')
@@ -1312,28 +1192,27 @@ class optimisePlanPage(ctk.CTkFrame):
 
         if self.evacPoint != -1: # if the user has selected an evac point
             for node in app.nodePositions.keys(): # for each node that is not the evac point
-                if app.nodePositions[node] != (-1,-1) and node != self.evacPoint:
+                if app.nodePositions[node] != (-1,-1) and node != self.evacPoint and not self.paths[node + 10]:
                     self.astar(node, self.evacPoint) # run the A* algorithm to find the path
             # enable to button and set the minimum time on the slider
             self.timeSlider.configure(state='normal')
             self.simulateEvent.configure(state='normal')
             self.setMinimumTime()
+            app.pathsFound = True
         else:
             self.evacPointWarning.place(x=300, y=250)
         self.enableAllButtons()
-        app.simulationRan = True
 
     def handleSimulateEventClick(self):
         self.disableAllButtons()
         self.simulateEvent.configure(text_color='white', fg_color='black')
-        print(f'self.paths: {self.paths}')
-        print(f'app.capacityValues: {app.capacityValues}')
         for path in self.paths.keys():
             if self.paths[path] and app.capacityValues[path - 10] == -1:
                 self.enableAllButtons()
                 self.capacityWarning.place(x=300, y=250)
                 return None
         self.newFlowSimulation() # runs the flow simulation algorithm
+        app.bottlenecksFound = True
         self.enableAllButtons()
 
     def handleEvacPointClick(self):
@@ -1517,8 +1396,6 @@ class Canvas(ctk.CTkCanvas):
                 colour = warningGreen
             case _:
                 colour = purple
-
-        self.master.master.master.master.dataAdded.set(True)
 
         if not temporary: # temporary is a parameter that effects whether the pixel will have its id recorded for deletion later if it is temporary
             # the create_rectangle function takes in coordinates of the top left of the rectangle and the bottom right as well as the fill and outline colours
