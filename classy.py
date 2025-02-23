@@ -42,6 +42,7 @@ class App(tk.Tk):
             16:[],
             17:[]
         }
+        self.bottlenecks = []
         self.dataAdded = ctk.BooleanVar(value=False)
         self.pathsFound = False
         self.bottlenecksFound = False
@@ -116,7 +117,7 @@ class Menu(ctk.CTkFrame):
 
     def openInputDataPage(self):
         self.master.showPage(self.master.inputDataPage) # calls the method in the app class to show the input data page
-        self.master.inputDataPage.canvas.display(True)
+        self.master.inputDataPage.canvas.display(False)
         self.after(100, lambda: self.inputDataButton.configure(text_color='black', fg_color='white')) # returns the button to its original state after 100ms
 
     def openOptimisePlanPage(self):
@@ -165,6 +166,7 @@ class homePage(ctk.CTkFrame):
         self.warningTable.heading('Index', text='Index')
         self.warningTable.heading('Type', text='Type')
         self.warningTable.heading('Extra Information', text='Extra Information')
+        self.warningTable.bind('<<TreeviewSelect>>', self.warningSelected)
 
         # creating the widgets that will be placed in the upper content frame
         self.mapContainer = ctk.CTkFrame(self.upperContentFrame, corner_radius=15, border_color='black', border_width=5, bg_color='white', fg_color='white')
@@ -251,7 +253,35 @@ class homePage(ctk.CTkFrame):
                 self.capacityDataCheckBox.select()
                 break
             self.capacityDataCheckBox.deselect()
+        
+        for index, bottleneck in enumerate(app.bottlenecks):
+            position, width, severity = bottleneck
+            if severity == 1:
+                self.warningTable.insert(parent='', index=tk.END, values=(index, 'Bottleneck', 'Urgent Bottleneck'))
+            else:
+                self.warningTable.insert(parent='', index=tk.END, values=(index, 'Bottleneck', 'Potential Bottleneck'))
 
+    def warningSelected(self,_):
+        for i in self.warningTable.selection():
+            print(self.warningTable.item(i)['values'])
+            index = self.warningTable.item(i)['values'][0]
+            position = app.bottlenecks[index][0]
+            x, y = position
+            self.highlightPoint(x, y)
+
+    def highlightPoint(self, x, y):
+        temporaryPixels = []
+        for dx, dy in [(-2, -2), (0, -2), (2, -2), (-2, 0), (2, 0), (-2, 2), (0, 2), (2, 2),
+    (-1, -2), (1, -2), (-2, -1), (2, -1), (-2, 1), (2, 1), (-1, 2), (1, 2)]:
+            tempPixel = self.canvas.creation(x + dx, y + dy, 2, True)
+            temporaryPixels.append(tempPixel)
+        
+        self.after(1000, lambda: self.deleteTempPixels(temporaryPixels))
+
+    def deleteTempPixels(self, tempPixels): # function to delete the temporary squares drawn when drawing a line
+        for pixel in tempPixels:
+            self.canvas.delete(pixel)
+        
 class dataPoint(): # this class provides a blueprint for the pixels that are to be stored in the previousActions and redoActions lists
     def __init__(self, x, y, prevColour, colour, dragIndex):
        self.x = x
@@ -686,6 +716,7 @@ class inputDataPage(ctk.CTkFrame):
         for path in app.paths.keys():
             app.paths[path] = []
 
+        app.bottlenecks = []
         # if the bullseye button was disabled it will be re-enabled
         self.bullseyeButton.configure(state='normal')
         self.planInserted = False # the planInserted boolean is set to false to indicate no data has been added
@@ -734,7 +765,7 @@ class inputDataPage(ctk.CTkFrame):
             self.canvas.matrix = json.load(file) # loads the matrix from the file into the input data page matrix
             self.master.dataAdded.set(True) # sets the dataAdded boolean to true to indicate data has been added
             self.master.matrix = copy.deepcopy(self.canvas.matrix) # copies the matrix from the input data page to the app wide matrix
-            self.canvas.display(True) # displays the data from the file on the canvas
+            self.canvas.display(False) # displays the data from the file on the canvas
             self.planInserted = True
 
     def noNodesLeft(self): # function to disable the bullseye button when there are no nodes left
@@ -976,7 +1007,7 @@ class optimisePlanPage(ctk.CTkFrame):
         x2, y2 = point2
         return abs(x1 - x2) + abs(y1 - y2)
 
-    def newFlowSimulation(self): # function to run the flow simulation algorithm *explained in the report*
+    def flowSimulation(self): # function to run the flow simulation algorithm *explained in the report*
         problems = []
         for pathID, pathPositions in app.paths.items():
             if pathPositions:
@@ -1002,7 +1033,8 @@ class optimisePlanPage(ctk.CTkFrame):
             if severity > 0:
                 colour = self.getSeverityColour(severity)
                 self.canvas.creation(pos[0], pos[1], colour, False)
-                bottlenecks.append((pos, width, severity))
+                if severity >= 0.7:
+                    bottlenecks.append((pos, width, severity))
         return bottlenecks
 
     def measurePathWidth(self, position, pathID):
@@ -1211,7 +1243,9 @@ class optimisePlanPage(ctk.CTkFrame):
                 self.enableAllButtons()
                 self.capacityWarning.place(x=300, y=250)
                 return None
-        self.newFlowSimulation() # runs the flow simulation algorithm
+        bottlenecks = self.flowSimulation() # runs the flow simulation algorithm
+        if bottlenecks:
+            app.bottlenecks = bottlenecks
         app.bottlenecksFound = True
         self.enableAllButtons()
 
@@ -1411,14 +1445,14 @@ class Canvas(ctk.CTkCanvas):
             squareID = self.create_rectangle((self.pixelSize * (x+1) - self.pixelSize, self.pixelSize * (y+1) - self.pixelSize, self.pixelSize * (x+1) - 1, self.pixelSize * (y+1) - 1), fill=colour, outline=colour)
             return squareID
 
-    def display(self, drawPaths):
+    def display(self, drawBottlenecks):
         # resets the canvas so we can redraw the matrix
         self.delete('all')
 
         # for each pixel in the matrix we draw a square with the colour based on the base value of the pixel
         for y in range(80):
             for x in range(120):
-                if drawPaths and app.matrix[y][x].get('paths', []):
+                if app.matrix[y][x].get('paths', []):
                     colour = self.purple
                     self.create_rectangle((self.pixelSize * (x+1) - self.pixelSize, self.pixelSize * (y+1) - self.pixelSize, self.pixelSize * (x+1) - 1, self.pixelSize * (y+1) - 1), fill=colour, outline=colour)
 
@@ -1440,6 +1474,16 @@ class Canvas(ctk.CTkCanvas):
 
                 if app.matrix[y][x]['base'] == 0 or app.matrix[y][x]['base'] > 1:
                     self.create_rectangle((self.pixelSize * (x+1) - self.pixelSize, self.pixelSize * (y+1) - self.pixelSize, self.pixelSize * (x+1) - 1, self.pixelSize * (y+1) - 1), fill=colour, outline=colour)
+
+        if drawBottlenecks:
+            for bottleneck in app.bottlenecks:
+                position, width, severity = bottleneck
+                x, y = position
+                if severity == 1:
+                    colour = self.warningRed
+                else:
+                    colour = self.warningOrange
+                self.create_rectangle((self.pixelSize * (x+1) - self.pixelSize, self.pixelSize * (y+1) - self.pixelSize, self.pixelSize * (x+1) - 1, self.pixelSize * (y+1) - 1), fill=colour, outline=colour)
 
 class warningWidget(ctk.CTkFrame):
     def __init__(self, parent, message, confirmCommand=None, cancelCommand=None):
