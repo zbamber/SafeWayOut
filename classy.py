@@ -7,6 +7,8 @@ import json
 from queue import PriorityQueue
 import copy
 import math
+import cv2
+import numpy as np
 
 class App(tk.Tk):
 
@@ -412,11 +414,16 @@ class inputDataPage(ctk.CTkFrame):
         self.configureTextButtons(self.capacityButton)
 
         # these two widgets use custom classes to allow for more complex designs
-        self.overwriteWarning = warningWidget(self, 'Are you sure you want to overwrite the data', confirmCommand=self.overwrite)
+        self.JSONOverwriteWarning = warningWidget(self, 'Are you sure you want to overwrite the data', confirmCommand=self.JSONOverwrite)
+        self.PNGOverwriteWarning = warningWidget(self, 'Are you sure you want to overwrite the data', confirmCommand=lambda: self.imageImportWarning.place(x=300, y=250))
+        self.imageImportWarning = warningWidget(self, 'This is a tool to speed up data input, will require significant cleanup', confirmCommand=self.PNGOverwrite)
         self.capacityDataPage = capacityDataInput(self)
 
-    def overwrite(self):
-        self.readFile()
+    def JSONOverwrite(self):
+        self.readJSONFile()
+    
+    def PNGOverwrite(self):
+        self.importImage()
 
     def placeWidgets(self):
         # placing the mapcontainer and tool container frames side by side
@@ -699,9 +706,7 @@ class inputDataPage(ctk.CTkFrame):
             if not self.redoActions or self.redoActions[-1].dragIndex != redoAction.dragIndex: 
                 break
 
-    def handleClearButtonClick(self):
-        self.deselectCurrentButton()
-        self.clearCanvasButton.configure(text_color='white', fg_color='black')
+    def resetCanvas(self):
         # items on the canvas are deleted
         self.canvas.delete('all')
 
@@ -709,6 +714,11 @@ class inputDataPage(ctk.CTkFrame):
         for y in range(len(self.canvas.matrix)):
             for x in range(len(self.canvas.matrix[y])):
                 self.canvas.matrix[y][x]['base'] = 1
+
+    def handleClearButtonClick(self):
+        self.deselectCurrentButton()
+        self.clearCanvasButton.configure(text_color='white', fg_color='black')
+        self.resetCanvas()
 
         # the nodes are reset to available and their positions are reset
         for node in self.nodes.keys():
@@ -760,13 +770,43 @@ class inputDataPage(ctk.CTkFrame):
         self.openFileButton.configure(text_color='white', fg_color='black')
 
         # opens a file dialog to allow the user to choose a file to open
-        self.filePath = filedialog.askopenfilename(initialdir='/temp', title='Choose File', filetypes=[('json Files', '*.json')])
-        if self.master.dataAdded.get() == True: # if there is already data there it will warn the user and give the option to cancel
-            self.overwriteWarning.place(x = 300, y = 250) # places the custom class warning on the page
-        else:
-            self.readFile() # if there is no data it will read the file
+        self.filePath = filedialog.askopenfilename(initialdir='/temp', title='Choose File', filetypes=[('json Files', '*.json'), ('images', '*.png')])
+        print(self.filePath)
+        if self.filePath.__contains__('.json'):
+            if self.master.dataAdded.get() == True: # if there is already data there it will warn the user and give the option to cancel
+                self.JSONOverwriteWarning.place(x = 300, y = 250) # places the custom class warning on the page
+            else:
+                self.readJSONFile() # if there is no data it will read the file
+        elif self.filePath.__contains__('.png'):
+            if self.master.dataAdded.get() == True:
+                self.PNGOverwriteWarning.place(x=300, y=250)
+            else:
+                self.imageImportWarning.place(x=300, y=250)
 
-    def readFile(self):
+    def importImage(self):
+        self.resetCanvas()
+        image = cv2.imread(self.filePath)
+        grayscaleImage = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        _, thresholdedImage = cv2.threshold(grayscaleImage, 4, 255, cv2.THRESH_BINARY)
+        imageHeight, imageWidth = thresholdedImage.shape
+        gridHeight = 80
+        gridWidth = 120
+        cellHeight = imageHeight / gridHeight
+        cellWidth = imageWidth / gridWidth
+
+        for y in range(gridHeight):
+            for x in range(gridWidth):
+                xStart = int(x * cellWidth)
+                xEnd = int((x+1) * cellWidth)
+                yStart = int(y * cellHeight)
+                yEnd = int((y+1) * cellHeight)
+
+                cell = thresholdedImage[yStart:yEnd, xStart:xEnd]
+
+                if np.any(cell == 0):
+                    self.canvas.creation(x, y, 0, False)
+
+    def readJSONFile(self):
         with open(self.filePath, 'r') as file: # opens the file in read mode
             self.canvas.matrix = json.load(file) # loads the matrix from the file into the input data page matrix
             self.master.dataAdded.set(True) # sets the dataAdded boolean to true to indicate data has been added
