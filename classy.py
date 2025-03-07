@@ -1641,9 +1641,11 @@ class nodeWidget(ctk.CTkFrame):
         self.placeWidgets()
 
     def createWidgets(self, image):
+        self.entryValue = ctk.StringVar()
+        self.entryValue.trace_add("write", self.validateEntry)
         self.image = ctk.CTkLabel(self, image=image, text='')
-        self.label = ctk.CTkLabel(self, text='Input Capacity', text_color='black', font=('Excalifont',20))
-        self.entryField = ctk.CTkEntry(self, fg_color='white', text_color='black', font=('Excalifont',15), justify='center')
+        self.label = ctk.CTkLabel(self, text='Input Capacity', text_color='black', font=('Excalifont', 20))
+        self.entryField = ctk.CTkEntry(self, fg_color='white', text_color='black', font=('Excalifont', 15), justify='center', textvariable=self.entryValue)
     
     def placeWidgets(self):
         self.image.pack(padx=(10,0), pady=10, side='left')
@@ -1652,7 +1654,12 @@ class nodeWidget(ctk.CTkFrame):
 
     def getEntry(self): # a method to get the value of the entry field
         return self.entryField.get()
- 
+
+    def validateEntry(self, *args): # a method to validate the entry field so that only integers can be entered
+        newValue = self.entryValue.get()
+        if not newValue.isdigit():
+            self.entryValue.set("".join(filter(str.isdigit, newValue)))
+    
 if __name__ == '__main__': # runs the app if the file is run as the main file
     app = App()
     app.mainloop()
