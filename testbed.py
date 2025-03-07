@@ -1,5 +1,5 @@
-position = (1,2)
-compound = (position, 3)
-print(f'pathwidth = {compound[1]}')
-print(f'x= {compound[0][0]}')
-print(f'y= {compound[0][1]}')
+small = 300
+huge = 8_000_000_000
+
+print(f"300 requires {small.bit_length()} bits")
+print(f"8 billion requires {huge.bit_length()} bits")
