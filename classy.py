@@ -491,8 +491,8 @@ class inputDataPage(ctk.CTkFrame):
             self.lineEnd = (x,y)
             self.drawingLine = False # the line is no longer being drawn
             self.dragIndex += 1 # the drag index is increased to allow for undo and redo to undo and redo the whole line
-            lineData = self.drawLine(self.lineStart, (x,y), False) # the line is drawn on the canvas
-            self.previousActions += lineData # the line data returned from the drawLine function is added to the previousActions list
+            lineData = self.drawStraightLine(self.lineStart, (x,y), False) # the line is drawn on the canvas
+            self.previousActions += lineData # the line data returned from the drawStraightLine function is added to the previousActions list
         else: # if the line has not been started then we start it
             self.lineStart = (x,y) # the start of the line is stored
             self.drawingLine = True # the line is being drawn
@@ -507,9 +507,9 @@ class inputDataPage(ctk.CTkFrame):
             for pixel in self.tempPixels:
                 self.canvas.delete(pixel)
             # the draw line function returns the pixels drawn so that if the line needs to be deleted it can be done so easily
-            self.tempPixels = self.drawLine(self.lineStart, (x,y), self.drawingLine)
+            self.tempPixels = self.drawStraightLine(self.lineStart, (x,y), self.drawingLine)
 
-    def drawLine(self, start, end, lineSubmitted):
+    def drawStraightLine(self, start, end, lineSubmitted):
         lineData = []
         if abs(end[0] - start[0]) > abs(end[1] - start[1]): # if the line is more horizontal than vertical
             lineData = self.drawHorizontalLine(start[0], start[1], end[0], end[1], lineSubmitted)
@@ -1418,7 +1418,7 @@ class optimisePlanPage(ctk.CTkFrame):
         for path in self.master.paths.values():
             if len(path) / self.WALKING_PACE > minTime: # if the time to evacuate is greater than the current minimum time it will be set as the minimum time
                 minTime = math.ceil(len(path) / self.WALKING_PACE)
-        self.timeSlider.configure(from_=minTime, to=300) # the slider is updated to have the minimum time as the minimum value
+        self.timeSlider.configure(from_=minTime, to=500) # the slider is updated to have the minimum time as the minimum value
 
 class Canvas(ctk.CTkCanvas):
     def __init__(self, parent, height, width):
