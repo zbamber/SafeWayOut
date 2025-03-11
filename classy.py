@@ -996,7 +996,7 @@ class optimisePlanPage(ctk.CTkFrame):
                 self.after(250, self.deleteTemporarySquares(tempSquareIDs))
                 return False
 
-            neighbors = []
+            neighbours = []
             current = openSet.get()[2]
             queue.remove(current)
 
@@ -1011,25 +1011,25 @@ class optimisePlanPage(ctk.CTkFrame):
                 return True
 
             if current[1] < self.MAX_HEIGHT and self.canvas.matrix[current[1] + 1][current[0]]['base'] != 0:
-                neighbors.append((current[0], current[1] + 1))
+                neighbours.append((current[0], current[1] + 1))
             if current[1] > 0 and self.canvas.matrix[current[1] - 1][current[0]]['base'] != 0:
-                neighbors.append((current[0], current[1] - 1))
+                neighbours.append((current[0], current[1] - 1))
             if current[0] < self.MAX_WIDTH and self.canvas.matrix[current[1]][current[0] + 1]['base'] != 0:
-                neighbors.append((current[0] + 1, current[1]))
+                neighbours.append((current[0] + 1, current[1]))
             if current[0] > 0 and self.canvas.matrix[current[1]][current[0] - 1]['base'] != 0:
-                neighbors.append((current[0] - 1, current[1]))
+                neighbours.append((current[0] - 1, current[1]))
 
-            for neighbor in neighbors:
+            for neighbour in neighbours:
                 tempGScore = gScore[current[1]][current[0]] + 1
-                if tempGScore < gScore[neighbor[1]][neighbor[0]]:
-                    previousNodes[neighbor] = current
-                    gScore[neighbor[1]][neighbor[0]] = tempGScore
-                    fScore[neighbor[1]][neighbor[0]] = tempGScore + self.heuristic(neighbor, end)
-                    if neighbor not in queue:
+                if tempGScore < gScore[neighbour[1]][neighbour[0]]:
+                    previousNodes[neighbour] = current
+                    gScore[neighbour[1]][neighbour[0]] = tempGScore
+                    fScore[neighbour[1]][neighbour[0]] = tempGScore + self.heuristic(neighbour, end)
+                    if neighbour not in queue:
                         count += 1
-                        openSet.put((fScore[neighbor[1]][neighbor[0]], count, neighbor))
-                        queue.add(neighbor)
-                        squareID = self.canvas.creation(neighbor[0], neighbor[1], 9, True)
+                        openSet.put((fScore[neighbour[1]][neighbour[0]], count, neighbour))
+                        queue.add(neighbour)
+                        squareID = self.canvas.creation(neighbour[0], neighbour[1], 9, True)
                         tempSquareIDs.append(squareID)
 
             if current != start:
