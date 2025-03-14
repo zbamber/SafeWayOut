@@ -848,6 +848,7 @@ class optimisePlanPage(ctk.CTkFrame):
         self.evacPoint = -1
         self.startNode = -1
         self.nodeChooserOpen = False
+        self.astarRunning = False
 
         # the following constants are used in the flow simulation algorithm
         self.WALKING_PACE = 1.4
@@ -975,7 +976,8 @@ class optimisePlanPage(ctk.CTkFrame):
         button.configure(border_width=2)
         button.pack_configure(pady=2)
 
-    def astar(self, startNode, endNode): # A* algorithm *will be explained in the report*
+    def astar(self, startNode, endNode, callback=None): # A* algorithm *will be explained in the report*
+        self.astarRunning = True
         self.canvas.matrix = copy.deepcopy(self.master.matrix)
         tempSquareIDs = []
         start = self.master.nodePositions[startNode]
@@ -994,7 +996,10 @@ class optimisePlanPage(ctk.CTkFrame):
             nonlocal count
             if openSet.empty():
                 self.after(250, self.deleteTemporarySquares(tempSquareIDs))
-                return False
+                self.astarRunning = False
+                if callback:
+                    callback()
+                return
 
             neighbours = []
             current = openSet.get()[2]
@@ -1008,7 +1013,10 @@ class optimisePlanPage(ctk.CTkFrame):
                 self.setMinimumTime()
                 self.after(250, self.deleteTemporarySquares(tempSquareIDs))
                 self.master.matrix = copy.deepcopy(self.canvas.matrix)
-                return True
+                self.astarRunning = False
+                if callback:
+                    callback()
+                return
 
             if current[1] < self.MAX_HEIGHT and self.canvas.matrix[current[1] + 1][current[0]]['base'] != 0:
                 neighbours.append((current[0], current[1] + 1))
@@ -1038,8 +1046,6 @@ class optimisePlanPage(ctk.CTkFrame):
 
             self.after(1, run_algorithm_step)
         run_algorithm_step()
-        
-        return True
 
     def reconstructPath(self, previousNodes, start, current, startNode): # function to reconstruct the path from the A* algorithm *explained in the report*
         while current in previousNodes:
@@ -1268,18 +1274,31 @@ class optimisePlanPage(ctk.CTkFrame):
         self.showAllPaths.configure(text_color='white', fg_color='black')
         self.disableAllButtons()
 
-        if self.evacPoint != -1: # if the user has selected an evac point
-            for node in self.master.nodePositions.keys(): # for each node that is not the evac point
-                if self.master.nodePositions[node] != (-1,-1) and node != self.evacPoint and not self.master.paths[node + 10]:
-                    self.astar(node, self.evacPoint) # run the A* algorithm to find the path
-            # enable to button and set the minimum time on the slider
-            self.timeSlider.configure(state='normal')
-            self.simulateEvent.configure(state='normal')
-            self.setMinimumTime()
-            self.master.pathsFound = True
-        else:
+        self.nodesToProcess = []
+
+        if self.evacPoint == -1:
             self.evacPointWarning.place(x=300, y=250)
-        self.enableAllButtons()
+            self.enableAllButtons()
+            return None
+
+        for node in self.master.nodePositions.keys():
+            if self.master.nodePositions[node] != (-1,-1) and node != self.evacPoint and not self.master.paths[node + 10]:
+                self.nodesToProcess.append(node)
+
+        def processNext():
+            if not self.nodesToProcess:
+                self.timeSlider.configure(state='normal')
+                self.simulateEvent.configure(state='normal')
+                self.setMinimumTime()
+                self.master.pathsFound = True
+                self.enableAllButtons()
+                return
+            
+            if not self.astarRunning:
+                self.astar(self.nodesToProcess.pop(0), self.evacPoint, callback=processNext)
+            else:
+                self.after(10, processNext)
+        processNext()
 
     def handleSimulateEventClick(self):
         self.disableAllButtons()
