@@ -1276,16 +1276,19 @@ class optimisePlanPage(ctk.CTkFrame):
 
         self.nodesToProcess = []
 
-        if self.evacPoint == -1:
+        if self.evacPoint == -1: # If the user does not have an evac point selected
             self.evacPointWarning.place(x=300, y=250)
             self.enableAllButtons()
             return None
 
+        # loops through all nodes creating a list of available nodes
         for node in self.master.nodePositions.keys():
             if self.master.nodePositions[node] != (-1,-1) and node != self.evacPoint and not self.master.paths[node + 10]:
                 self.nodesToProcess.append(node)
 
+        # callback function to run the next path
         def processNext():
+            # once we have finished running all paths
             if not self.nodesToProcess:
                 self.timeSlider.configure(state='normal')
                 self.simulateEvent.configure(state='normal')
@@ -1294,10 +1297,11 @@ class optimisePlanPage(ctk.CTkFrame):
                 self.enableAllButtons()
                 return
             
+            # astarRunning flag decides whether we run the next step
             if not self.astarRunning:
                 self.astar(self.nodesToProcess.pop(0), self.evacPoint, callback=processNext)
             else:
-                self.after(10, processNext)
+                self.after(10, processNext) # recursion call
         processNext()
 
     def handleSimulateEventClick(self):
