@@ -1218,15 +1218,6 @@ class optimisePlanPage(ctk.CTkFrame):
 
         return False
 
-    def checkHorizontal(self, position, pathID):
-        x, y = position
-        connections = self.checkConnections(position, pathID)
-
-        if connections['left'] and connections['right']:
-            return True
-        
-        return False
-
     def checkConnections(self, position, pathID):
         x, y = position
         connections = {
